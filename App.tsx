@@ -48,11 +48,9 @@ const FlightPass = ({
   return (
     <div 
       onClick={handleFlightClick}
-      className={`bg-white rounded-3xl shadow-luxury border border-stone-100 overflow-hidden relative mb-6 transition-all duration-500 cursor-pointer active:scale-[0.98] select-none group ${isFlying ? 'animate-flight-takeoff' : 'hover:scale-[1.01] hover:shadow-2xl'}`}
+      className={`bg-white rounded-3xl shadow-luxury border border-stone-100 overflow-hidden relative mb-6 transition-all duration-300 cursor-pointer active:scale-[0.98] select-none group 
+      ${isFlying ? 'animate-card-bump' : 'hover:scale-[1.01] hover:shadow-2xl'}`}
     >
-      {/* Shine Effect Overlay */}
-      {isFlying && <div className="animate-shine-sweep"></div>}
-
       <div className="absolute inset-0 bg-wafu-paper opacity-60 pointer-events-none mix-blend-multiply"></div>
       
       {/* Header Strip - Luxury Gold Inlay look */}
@@ -65,16 +63,37 @@ const FlightPass = ({
              <span className="text-4xl font-black font-serif text-wafu-indigo tracking-tighter drop-shadow-sm">{originCode}</span>
              <span className="text-[10px] text-stone-400 font-bold tracking-[0.2em] uppercase mt-1">{originCity}</span>
            </div>
+           
            <div className="flex-1 px-4 flex flex-col items-center opacity-80 group-hover:opacity-100 transition-opacity">
-             {/* Animated Plane Icon */}
-             <div className={`text-wafu-gold mb-2 ${isReturn ? 'rotate-[185deg]' : '-rotate-5'} animate-fly origin-center filter drop-shadow-sm`}>
-                <Icons.Plane />
+             {/* Plane Icon with Shoot Animation */}
+             <div className="relative z-10 w-8 h-8 flex items-center justify-center">
+                 <div className={`text-wafu-gold transition-all duration-300 relative
+                     ${isFlying 
+                        ? (isReturn ? 'animate-plane-shoot-left' : 'animate-plane-shoot-right') 
+                        : (isReturn ? 'rotate-[185deg]' : '-rotate-5') + ' animate-fly'
+                     }
+                 `}>
+                    <Icons.Plane />
+                    
+                    {/* Flowing Gold Trail (Only during flight) */}
+                    {isFlying && (
+                        <div className={`absolute top-1/2 -mt-0.5 h-1 bg-gradient-to-r from-transparent via-[#C5A059] to-transparent blur-[1px] rounded-full animate-pulse
+                           ${isReturn 
+                             ? 'left-full w-28 origin-left' 
+                             : 'right-full w-28 origin-right'
+                           }
+                        `}></div>
+                    )}
+                 </div>
              </div>
-             <div className="w-full h-px bg-stone-200 relative">
+             
+             {/* Path Line */}
+             <div className="w-full h-px bg-stone-200 relative mt-2">
                <div className="absolute right-0 top-1/2 -mt-[3px] w-1.5 h-1.5 bg-stone-300 rounded-full box-border border border-white"></div>
                <div className="absolute left-0 top-1/2 -mt-[3px] w-1.5 h-1.5 bg-wafu-indigo rounded-full box-border border border-white"></div>
              </div>
            </div>
+           
            <div className="flex flex-col items-end">
              <span className="text-4xl font-black font-serif text-wafu-indigo tracking-tighter drop-shadow-sm">{destCode}</span>
              <span className="text-[10px] text-stone-400 font-bold tracking-[0.2em] uppercase mt-1">{destCity}</span>

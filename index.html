@@ -56,23 +56,16 @@
         background: linear-gradient(to bottom right, #C5A059, #E6C585);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        /* Removed shimmer animation for a more understated, old-money feel */
       }
       
       /* Traditional Matte Gold Background */
       .bg-gold-leaf {
         background: linear-gradient(to bottom right, #C5A059, #E6C585);
-        /* Removed metallic sheen and animation */
       }
       
       /* Soft diffused glow, no sharp metallic edges */
       .gold-glow {
         box-shadow: 0 4px 12px rgba(191, 164, 111, 0.4);
-      }
-
-      @keyframes shimmer {
-        0% { background-position: 0% 50%; }
-        100% { background-position: 200% 50%; }
       }
 
       /* Bouncy Click Animation */
@@ -183,27 +176,47 @@
         animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       }
 
-      /* Flight Animation */
-      @keyframes fly-across {
-        0% { transform: translateX(-10px) translateY(5px) rotate(-5deg); opacity: 0; }
+      /* Entrance Fly */
+      @keyframes fly-enter {
+        0% { transform: translateX(-10px) translateY(5px); opacity: 0; }
         20% { opacity: 1; }
-        100% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+        100% { transform: translateX(0) translateY(0); opacity: 1; }
       }
       .animate-fly {
-        animation: fly-across 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        animation: fly-enter 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
 
-      /* Dynamic Flight Takeoff (Card Click) */
-      @keyframes flight-takeoff {
-        0% { transform: scale(1) rotate(0deg); opacity: 1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        30% { transform: scale(0.96) rotate(-1deg) translateY(5px); opacity: 1; box-shadow: 0 0px 0px 0px rgba(0,0,0,0); }
-        100% { transform: scale(1.05) translate(150vw, -80vh) rotate(15deg); opacity: 0; }
+      /* NEW: Card Bump (Jump) Animation */
+      @keyframes card-bump {
+        0% { transform: scale(1); }
+        40% { transform: scale(0.97) translateY(2px); }
+        60% { transform: scale(1.02) translateY(-2px); box-shadow: 0 15px 30px -5px rgba(191, 164, 111, 0.2); }
+        100% { transform: scale(1); box-shadow: 0 15px 35px -5px rgba(191, 164, 111, 0.25); }
       }
-      .animate-flight-takeoff {
-        animation: flight-takeoff 1.2s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
-        pointer-events: none;
+      .animate-card-bump {
+        animation: card-bump 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
+      /* NEW: Plane Shoot Right (Outbound) */
+      @keyframes plane-shoot-right {
+        0% { transform: translate(0, 0) rotate(-5deg); opacity: 1; }
+        10% { transform: translate(-10px, 5px) rotate(-10deg); opacity: 1; }
+        100% { transform: translate(300px, -80px) rotate(15deg) scale(1.2); opacity: 0; }
+      }
+      .animate-plane-shoot-right {
+        animation: plane-shoot-right 1s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+      }
+
+      /* NEW: Plane Shoot Left (Inbound) */
+      @keyframes plane-shoot-left {
+        0% { transform: translate(0, 0) rotate(185deg); opacity: 1; }
+        10% { transform: translate(10px, 5px) rotate(190deg); opacity: 1; }
+        100% { transform: translate(-300px, -80px) rotate(165deg) scale(1.2); opacity: 0; }
+      }
+      .animate-plane-shoot-left {
+        animation: plane-shoot-left 1s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+      }
+      
       /* Shine Sweep Effect - Sharper, cleaner */
       @keyframes shine-sweep {
         0% { left: -100%; opacity: 0; }
