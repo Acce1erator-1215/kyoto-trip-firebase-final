@@ -1,0 +1,7 @@
+{
+  "name": "Kyoto Journey 2026",
+  "description": "A Japanese-style travel companion app for a Kyoto trip in Jan 2026, featuring itinerary management, expense tracking, and maps.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

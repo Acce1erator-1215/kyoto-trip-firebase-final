@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Kyoto Journey 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;600;700;900&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      /* iOS Optimization */
+      body {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+
+      /* Hide scrollbar */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      
+      /* Vertical writing mode */
+      .writing-vertical {
+        writing-mode: vertical-rl;
+        text-orientation: upright;
+        letter-spacing: 0.1em;
+      }
+
+      /* Washi Paper Texture */
+      .bg-wafu-paper {
+        background-color: #FDFBF7;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+      }
+
+      /* Luxury Gold Leaf Text Effect */
+      .text-gold-leaf {
+        background: linear-gradient(135deg, #CFB06E 0%, #E6D5B8 25%, #BFA46F 50%, #E6D5B8 75%, #CFB06E 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 8s linear infinite;
+      }
+      
+      /* Luxury Gold Gradient Background */
+      .bg-gold-leaf {
+        background: linear-gradient(135deg, #CFB06E 0%, #F2E6D0 30%, #9E8246 60%, #F2E6D0 85%, #CFB06E 100%);
+        background-size: 200% auto;
+        animation: shimmer 12s linear infinite;
+      }
+
+      @keyframes shimmer {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+      }
+
+      /* Bouncy Click Animation */
+      .active-bounce:active {
+        transform: scale(0.95);
+        transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      /* Jump & Spin Animation */
+      @keyframes jump-spin {
+        0% { transform: translateY(0) rotate(0deg) scale(1); }
+        30% { transform: translateY(-15px) rotate(10deg) scale(1.05); } 
+        100% { transform: translateY(0) rotate(360deg) scale(1); } 
+      }
+      .animate-jump-spin {
+        animation: jump-spin 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* REALISTIC SAKURA FALL */
+      @keyframes sakura-fall-realistic {
+        0% {
+          opacity: 0;
+          top: -10%;
+          transform: translateX(0) rotate3d(1, 1, 1, 0deg);
+        }
+        10% {
+          opacity: 1;
+        }
+        25% {
+          transform: translateX(var(--sway-x)) rotate3d(1, 0.5, 0, 45deg);
+        }
+        50% {
+          transform: translateX(calc(var(--sway-x) * -1)) rotate3d(0.5, 1, 0, 90deg);
+        }
+        75% {
+          transform: translateX(var(--sway-x)) rotate3d(0, 1, 0.5, 135deg);
+        }
+        100% {
+          opacity: 0;
+          top: 110vh;
+          transform: translateX(0) rotate3d(1, 1, 1, 180deg);
+        }
+      }
+
+      .animate-sakura-fall {
+        position: fixed;
+        animation-name: sakura-fall-realistic;
+        animation-timing-function: linear; /* Movement speed is linear, but rotation/sway adds complexity */
+        animation-fill-mode: forwards;
+        will-change: transform, top, opacity;
+        z-index: 9999;
+        pointer-events: none;
+      }
+
+      /* CUSTOM RANGE SLIDER for Touch */
+      .range-slider {
+        -webkit-appearance: none;
+        width: 100%;
+        background: transparent;
+        cursor: pointer;
+        height: 24px; /* Taller touch area */
+        touch-action: none;
+      }
+      .range-slider:focus {
+        outline: none;
+      }
+      /* Track */
+      .range-slider::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 6px;
+        cursor: pointer;
+        background: #E2E8F0;
+        border-radius: 999px;
+        transition: background 0.2s;
+      }
+      /* Thumb */
+      .range-slider::-webkit-slider-thumb {
+        height: 24px;
+        width: 24px;
+        border-radius: 50%;
+        background: #183654; /* Wafu Indigo */
+        cursor: pointer;
+        -webkit-appearance: none;
+        margin-top: -9px; /* Centers thumb on track */
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        transition: transform 0.1s;
+      }
+      .range-slider:active::-webkit-slider-thumb {
+        transform: scale(1.2);
+      }
+
+      /* Stamp Drop Animation */
+      @keyframes stamp-drop {
+        0% { transform: scale(2) rotate(-15deg); opacity: 0; }
+        50% { transform: scale(0.9) rotate(-12deg); opacity: 1; }
+        70% { transform: scale(1.05) rotate(-12deg); }
+        100% { transform: scale(1) rotate(-12deg); }
+      }
+      .animate-stamp-drop {
+        animation: stamp-drop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+
+      /* Pop Effect for Toggles */
+      @keyframes pop {
+        0% { transform: scale(1); }
+        40% { transform: scale(1.25); }
+        100% { transform: scale(1); }
+      }
+      .animate-pop {
+        animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      /* Flight Animation - General Movement */
+      @keyframes fly-across {
+        0% { transform: translateX(-10px) translateY(5px) rotate(-5deg); opacity: 0; }
+        20% { opacity: 1; }
+        100% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+      }
+      .animate-fly {
+        animation: fly-across 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+
+      /* Dynamic Flight Takeoff (Card Click) */
+      @keyframes flight-takeoff {
+        0% { transform: scale(1) rotate(0deg); opacity: 1; }
+        25% { transform: scale(0.95) rotate(-1deg) translateY(5px); opacity: 1; }
+        100% { transform: scale(1.1) translate(120vw, -60vh) rotate(15deg); opacity: 0; }
+      }
+      .animate-flight-takeoff {
+        animation: flight-takeoff 1s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+        pointer-events: none; /* Prevent double clicks */
+      }
+
+      /* Shine Sweep Effect */
+      @keyframes shine-sweep {
+        0% { left: -100%; opacity: 0; }
+        20% { opacity: 0.6; }
+        100% { left: 200%; opacity: 0; }
+      }
+      .animate-shine-sweep {
+        position: absolute;
+        top: 0;
+        width: 60%;
+        height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent);
+        transform: skewX(-20deg);
+        animation: shine-sweep 0.7s ease-out forwards;
+        pointer-events: none;
+        z-index: 50;
+      }
+
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'],
+              sans: ['"Noto Sans JP"', 'sans-serif'],
+            },
+            colors: {
+              wafu: {
+                bg: '#FDFBF7', 
+                paper: '#FFFFFF',
+                text: '#1A202C', 
+                indigo: '#183654', // Kachiiro (Main Blue)
+                darkIndigo: '#0B1E33', // Deep Blue
+                gold: '#BFA46F',
+                goldLight: '#E6D5B8',
+                border: '#E2E8F0',
+                iron: '#4A5568', 
+              }
+            },
+            backgroundImage: {
+              'seigaiha': "url(\"data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 20 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 12c0-5.523 4.477-10 10-10s10 4.477 10 10v-2c0-5.523-4.477-10-10-10S0 4.477 0 10v2z' fill='%23183654' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E\")",
+            },
+            boxShadow: {
+              'washi': '0 4px 20px -2px rgba(24, 54, 84, 0.08), 0 0 0 1px rgba(24, 54, 84, 0.03)',
+              'float': '0 20px 40px -5px rgba(24, 54, 84, 0.15)',
+              'luxury': '0 10px 30px -5px rgba(191, 164, 111, 0.3)',
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+              'fade-in-up-gentle': 'fadeInUpGentle 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              'modal-slide-up': 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              'zoom-in': 'zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              'fade-in': 'fadeIn 0.3s ease-out',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: 0, transform: 'translateY(10px)' },
+                '100%': { opacity: 1, transform: 'translateY(0)' },
+              },
+              fadeInUpGentle: {
+                '0%': { opacity: 0, transform: 'translateY(15px) scale(0.98)', filter: 'blur(2px)' },
+                '100%': { opacity: 1, transform: 'translateY(0) scale(1)', filter: 'blur(0)' },
+              },
+              modalSlideUp: {
+                '0%': { opacity: 0, transform: 'translateY(20px) scale(0.98)' },
+                '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
+              },
+              zoomIn: {
+                '0%': { opacity: 0, transform: 'scale(0.95)' },
+                '100%': { opacity: 1, transform: 'scale(1)' },
+              },
+              fadeIn: {
+                '0%': { opacity: 0 },
+                '100%': { opacity: 1 },
+              }
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6"
+  }
+}
+</script>
+</head>
+  <body class="bg-[#F5F2EB] text-wafu-text font-sans antialiased overflow-hidden selection:bg-wafu-indigo selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
