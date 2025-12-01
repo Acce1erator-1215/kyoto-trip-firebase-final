@@ -2,10 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Kyoto Journey 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;600;700;900&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       /* iOS Optimization */
       body {
@@ -29,26 +31,43 @@
         letter-spacing: 0.1em;
       }
 
-      /* Washi Paper Texture */
-      .bg-wafu-paper {
-        background-color: #FDFBF7;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+      /* GLOBAL LUXURY TEXTURE - High quality grain overlay */
+      .texture-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+        opacity: 0.6;
+        mix-blend-mode: overlay;
       }
 
-      /* Luxury Gold Leaf Text Effect */
+      /* REFINED Washi Paper Texture - Softer */
+      .bg-wafu-paper {
+        background-color: #FDFBF7;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      }
+
+      /* Traditional Matte Gold (Kinpaku) - No metallic shimmer */
       .text-gold-leaf {
-        background: linear-gradient(135deg, #CFB06E 0%, #E6D5B8 25%, #BFA46F 50%, #E6D5B8 75%, #CFB06E 100%);
-        background-size: 200% auto;
+        background: linear-gradient(to bottom right, #C5A059, #E6C585);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        animation: shimmer 8s linear infinite;
+        /* Removed shimmer animation for a more understated, old-money feel */
       }
       
-      /* Luxury Gold Gradient Background */
+      /* Traditional Matte Gold Background */
       .bg-gold-leaf {
-        background: linear-gradient(135deg, #CFB06E 0%, #F2E6D0 30%, #9E8246 60%, #F2E6D0 85%, #CFB06E 100%);
-        background-size: 200% auto;
-        animation: shimmer 12s linear infinite;
+        background: linear-gradient(to bottom right, #C5A059, #E6C585);
+        /* Removed metallic sheen and animation */
+      }
+      
+      /* Soft diffused glow, no sharp metallic edges */
+      .gold-glow {
+        box-shadow: 0 4px 12px rgba(191, 164, 111, 0.4);
       }
 
       @keyframes shimmer {
@@ -58,7 +77,7 @@
 
       /* Bouncy Click Animation */
       .active-bounce:active {
-        transform: scale(0.95);
+        transform: scale(0.96);
         transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
@@ -80,7 +99,7 @@
           transform: translateX(0) rotate3d(1, 1, 1, 0deg);
         }
         10% {
-          opacity: 1;
+          opacity: 0.9;
         }
         25% {
           transform: translateX(var(--sway-x)) rotate3d(1, 0.5, 0, 45deg);
@@ -108,52 +127,50 @@
         pointer-events: none;
       }
 
-      /* CUSTOM RANGE SLIDER for Touch */
+      /* CUSTOM RANGE SLIDER for Touch - Elegant Style */
       .range-slider {
         -webkit-appearance: none;
         width: 100%;
         background: transparent;
         cursor: pointer;
-        height: 24px; /* Taller touch area */
+        height: 24px;
         touch-action: none;
       }
       .range-slider:focus {
         outline: none;
       }
-      /* Track */
       .range-slider::-webkit-slider-runnable-track {
         width: 100%;
-        height: 6px;
+        height: 4px; /* Thinner track for elegance */
         cursor: pointer;
         background: #E2E8F0;
         border-radius: 999px;
         transition: background 0.2s;
       }
-      /* Thumb */
       .range-slider::-webkit-slider-thumb {
-        height: 24px;
-        width: 24px;
+        height: 20px;
+        width: 20px;
         border-radius: 50%;
-        background: #183654; /* Wafu Indigo */
+        background: #183654;
         cursor: pointer;
         -webkit-appearance: none;
-        margin-top: -9px; /* Centers thumb on track */
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        transition: transform 0.1s;
+        margin-top: -8px; 
+        box-shadow: 0 0 0 2px #fff, 0 4px 10px rgba(24, 54, 84, 0.3); /* Ring effect */
+        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       }
       .range-slider:active::-webkit-slider-thumb {
-        transform: scale(1.2);
+        transform: scale(1.3);
       }
 
       /* Stamp Drop Animation */
       @keyframes stamp-drop {
-        0% { transform: scale(2) rotate(-15deg); opacity: 0; }
-        50% { transform: scale(0.9) rotate(-12deg); opacity: 1; }
+        0% { transform: scale(2) rotate(-15deg); opacity: 0; filter: blur(4px); }
+        50% { transform: scale(0.9) rotate(-12deg); opacity: 1; filter: blur(0px); }
         70% { transform: scale(1.05) rotate(-12deg); }
         100% { transform: scale(1) rotate(-12deg); }
       }
       .animate-stamp-drop {
-        animation: stamp-drop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        animation: stamp-drop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       }
 
       /* Pop Effect for Toggles */
@@ -166,7 +183,7 @@
         animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       }
 
-      /* Flight Animation - General Movement */
+      /* Flight Animation */
       @keyframes fly-across {
         0% { transform: translateX(-10px) translateY(5px) rotate(-5deg); opacity: 0; }
         20% { opacity: 1; }
@@ -178,31 +195,32 @@
 
       /* Dynamic Flight Takeoff (Card Click) */
       @keyframes flight-takeoff {
-        0% { transform: scale(1) rotate(0deg); opacity: 1; }
-        25% { transform: scale(0.95) rotate(-1deg) translateY(5px); opacity: 1; }
-        100% { transform: scale(1.1) translate(120vw, -60vh) rotate(15deg); opacity: 0; }
+        0% { transform: scale(1) rotate(0deg); opacity: 1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        30% { transform: scale(0.96) rotate(-1deg) translateY(5px); opacity: 1; box-shadow: 0 0px 0px 0px rgba(0,0,0,0); }
+        100% { transform: scale(1.05) translate(150vw, -80vh) rotate(15deg); opacity: 0; }
       }
       .animate-flight-takeoff {
-        animation: flight-takeoff 1s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
-        pointer-events: none; /* Prevent double clicks */
+        animation: flight-takeoff 1.2s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+        pointer-events: none;
       }
 
-      /* Shine Sweep Effect */
+      /* Shine Sweep Effect - Sharper, cleaner */
       @keyframes shine-sweep {
         0% { left: -100%; opacity: 0; }
-        20% { opacity: 0.6; }
+        20% { opacity: 0.5; }
         100% { left: 200%; opacity: 0; }
       }
       .animate-shine-sweep {
         position: absolute;
         top: 0;
-        width: 60%;
+        width: 40%;
         height: 100%;
-        background: linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent);
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent);
         transform: skewX(-20deg);
-        animation: shine-sweep 0.7s ease-out forwards;
+        animation: shine-sweep 0.8s ease-out forwards;
         pointer-events: none;
         z-index: 50;
+        mix-blend-mode: overlay;
       }
 
     </style>
@@ -228,19 +246,20 @@
               }
             },
             backgroundImage: {
-              'seigaiha': "url(\"data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 20 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 12c0-5.523 4.477-10 10-10s10 4.477 10 10v-2c0-5.523-4.477-10-10-10S0 4.477 0 10v2z' fill='%23183654' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E\")",
+              'seigaiha': "url(\"data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 20 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 12c0-5.523 4.477-10 10-10s10 4.477 10 10v-2c0-5.523-4.477-10-10-10S0 4.477 0 10v2z' fill='%23183654' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E\")",
             },
             boxShadow: {
-              'washi': '0 4px 20px -2px rgba(24, 54, 84, 0.08), 0 0 0 1px rgba(24, 54, 84, 0.03)',
-              'float': '0 20px 40px -5px rgba(24, 54, 84, 0.15)',
-              'luxury': '0 10px 30px -5px rgba(191, 164, 111, 0.3)',
+              'washi': '0 2px 15px -3px rgba(24, 54, 84, 0.06), 0 0 0 1px rgba(24, 54, 84, 0.02)',
+              'float': '0 20px 40px -10px rgba(24, 54, 84, 0.1), 0 0 0 1px rgba(255,255,255,0.5)',
+              'luxury': '0 15px 35px -5px rgba(191, 164, 111, 0.25), 0 0 0 1px rgba(191, 164, 111, 0.1)',
+              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
             },
             animation: {
               'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
               'fade-in-up-gentle': 'fadeInUpGentle 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)',
-              'modal-slide-up': 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-              'zoom-in': 'zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-              'fade-in': 'fadeIn 0.3s ease-out',
+              'modal-slide-up': 'modalSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
+              'zoom-in': 'zoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              'fade-in': 'fadeIn 0.4s ease-out',
             },
             keyframes: {
               fadeInUp: {
@@ -248,16 +267,16 @@
                 '100%': { opacity: 1, transform: 'translateY(0)' },
               },
               fadeInUpGentle: {
-                '0%': { opacity: 0, transform: 'translateY(15px) scale(0.98)', filter: 'blur(2px)' },
+                '0%': { opacity: 0, transform: 'translateY(20px) scale(0.99)', filter: 'blur(4px)' },
                 '100%': { opacity: 1, transform: 'translateY(0) scale(1)', filter: 'blur(0)' },
               },
               modalSlideUp: {
-                '0%': { opacity: 0, transform: 'translateY(20px) scale(0.98)' },
+                '0%': { opacity: 0, transform: 'translateY(40px) scale(0.96)' },
                 '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
               },
               zoomIn: {
-                '0%': { opacity: 0, transform: 'scale(0.95)' },
-                '100%': { opacity: 1, transform: 'scale(1)' },
+                '0%': { opacity: 0, transform: 'scale(0.95)', filter: 'blur(2px)' },
+                '100%': { opacity: 1, transform: 'scale(1)', filter: 'blur(0)' },
               },
               fadeIn: {
                 '0%': { opacity: 0 },
@@ -282,6 +301,7 @@
 </script>
 </head>
   <body class="bg-[#F5F2EB] text-wafu-text font-sans antialiased overflow-hidden selection:bg-wafu-indigo selection:text-white">
+    <div class="texture-overlay"></div>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

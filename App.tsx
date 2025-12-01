@@ -48,71 +48,72 @@ const FlightPass = ({
   return (
     <div 
       onClick={handleFlightClick}
-      className={`bg-white rounded-3xl shadow-washi border border-stone-200 overflow-hidden relative mb-6 transition-all duration-300 cursor-pointer active:scale-[0.98] select-none ${isFlying ? 'animate-flight-takeoff' : 'hover:scale-[1.01]'}`}
+      className={`bg-white rounded-3xl shadow-luxury border border-stone-100 overflow-hidden relative mb-6 transition-all duration-500 cursor-pointer active:scale-[0.98] select-none group ${isFlying ? 'animate-flight-takeoff' : 'hover:scale-[1.01] hover:shadow-2xl'}`}
     >
       {/* Shine Effect Overlay */}
       {isFlying && <div className="animate-shine-sweep"></div>}
 
-      <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
-      {/* Header Strip */}
-      <div className={`h-2 w-full absolute top-0 ${isReturn ? 'bg-wafu-indigo' : 'bg-gold-leaf'}`}></div>
+      <div className="absolute inset-0 bg-wafu-paper opacity-60 pointer-events-none mix-blend-multiply"></div>
       
-      <div className="p-6 pt-8 relative z-10">
+      {/* Header Strip - Luxury Gold Inlay look */}
+      <div className={`h-1.5 w-full absolute top-0 ${isReturn ? 'bg-wafu-indigo' : 'bg-gold-leaf shadow-md'}`}></div>
+      
+      <div className="p-6 pt-10 relative z-10">
          {/* Route */}
          <div className="flex items-center justify-between mb-8">
            <div className="flex flex-col">
-             <span className="text-4xl font-black font-serif text-wafu-indigo tracking-tight">{originCode}</span>
-             <span className="text-[10px] text-stone-400 font-bold tracking-widest uppercase mt-1">{originCity}</span>
+             <span className="text-4xl font-black font-serif text-wafu-indigo tracking-tighter drop-shadow-sm">{originCode}</span>
+             <span className="text-[10px] text-stone-400 font-bold tracking-[0.2em] uppercase mt-1">{originCity}</span>
            </div>
-           <div className="flex-1 px-4 flex flex-col items-center">
+           <div className="flex-1 px-4 flex flex-col items-center opacity-80 group-hover:opacity-100 transition-opacity">
              {/* Animated Plane Icon */}
-             <div className={`text-wafu-gold mb-1 ${isReturn ? 'rotate-[185deg]' : '-rotate-5'} animate-fly origin-center`}>
+             <div className={`text-wafu-gold mb-2 ${isReturn ? 'rotate-[185deg]' : '-rotate-5'} animate-fly origin-center filter drop-shadow-sm`}>
                 <Icons.Plane />
              </div>
-             <div className="w-full h-px bg-stone-300 relative">
-               <div className="absolute right-0 top-1/2 -mt-[3px] w-1.5 h-1.5 bg-stone-300 rounded-full"></div>
-               <div className="absolute left-0 top-1/2 -mt-[3px] w-1.5 h-1.5 bg-wafu-indigo rounded-full"></div>
+             <div className="w-full h-px bg-stone-200 relative">
+               <div className="absolute right-0 top-1/2 -mt-[3px] w-1.5 h-1.5 bg-stone-300 rounded-full box-border border border-white"></div>
+               <div className="absolute left-0 top-1/2 -mt-[3px] w-1.5 h-1.5 bg-wafu-indigo rounded-full box-border border border-white"></div>
              </div>
            </div>
            <div className="flex flex-col items-end">
-             <span className="text-4xl font-black font-serif text-wafu-indigo tracking-tight">{destCode}</span>
-             <span className="text-[10px] text-stone-400 font-bold tracking-widest uppercase mt-1">{destCity}</span>
+             <span className="text-4xl font-black font-serif text-wafu-indigo tracking-tighter drop-shadow-sm">{destCode}</span>
+             <span className="text-[10px] text-stone-400 font-bold tracking-[0.2em] uppercase mt-1">{destCity}</span>
            </div>
          </div>
 
          {/* Details Grid */}
-         <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+         <div className="grid grid-cols-2 gap-y-7 gap-x-4">
            <div>
-             <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider mb-1">Flight</p>
-             <p className="text-xl font-bold text-wafu-indigo font-serif">{flightNum}</p>
+             <p className="text-[9px] text-stone-400 uppercase font-bold tracking-widest mb-1.5">Flight</p>
+             <p className="text-xl font-bold text-wafu-indigo font-serif tracking-wide">{flightNum}</p>
            </div>
            <div className="text-right">
-              <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider mb-1">Seat</p>
-              <p className="text-xl font-bold text-wafu-indigo font-serif">{seat}</p>
+              <p className="text-[9px] text-stone-400 uppercase font-bold tracking-widest mb-1.5">Seat</p>
+              <p className="text-xl font-bold text-wafu-indigo font-serif tracking-wide">{seat}</p>
            </div>
            <div>
-              <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider mb-1">Date</p>
-              <p className="text-base font-bold text-wafu-text font-serif">{date}</p>
+              <p className="text-[9px] text-stone-400 uppercase font-bold tracking-widest mb-1.5">Date</p>
+              <p className="text-base font-bold text-wafu-text font-serif tracking-wide">{date}</p>
            </div>
            <div className="text-right">
-              <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider mb-1">Time</p>
-              <p className="text-base font-bold text-wafu-text font-serif">{time}</p>
+              <p className="text-[9px] text-stone-400 uppercase font-bold tracking-widest mb-1.5">Time</p>
+              <p className="text-base font-bold text-wafu-text font-serif tracking-wide">{time}</p>
            </div>
          </div>
       </div>
 
-      {/* Footer / Cutoff */}
-      <div className="bg-stone-50/50 px-6 py-4 border-t-2 border-dashed border-stone-200 flex justify-between items-center relative z-10">
-        <div className="w-4 h-4 bg-wafu-bg rounded-full absolute -top-2.5 -left-2 border border-stone-200"></div>
-        <div className="w-4 h-4 bg-wafu-bg rounded-full absolute -top-2.5 -right-2 border border-stone-200"></div>
+      {/* Footer / Cutoff - Refined with shadows */}
+      <div className="bg-stone-50/80 backdrop-blur-sm px-6 py-5 border-t border-dashed border-stone-300 flex justify-between items-center relative z-10">
+        <div className="w-5 h-5 bg-wafu-bg rounded-full absolute -top-3 -left-3 border border-stone-200 shadow-inner"></div>
+        <div className="w-5 h-5 bg-wafu-bg rounded-full absolute -top-3 -right-3 border border-stone-200 shadow-inner"></div>
         
         <div className="flex flex-col">
            <span className="text-[9px] text-stone-400 font-bold uppercase tracking-widest">Class</span>
-           <span className="text-sm font-bold text-wafu-text">Economy</span>
+           <span className="text-sm font-bold text-wafu-text font-serif">Economy</span>
         </div>
         <div className="flex flex-col items-end">
            <span className="text-[9px] text-stone-400 font-bold uppercase tracking-widest">Airline</span>
-           <span className="text-sm font-bold text-wafu-text">Starlux</span>
+           <span className="text-sm font-bold text-wafu-text font-serif">Starlux</span>
         </div>
       </div>
     </div>
@@ -201,22 +202,22 @@ const DateSelector = ({
   const scrollLogic = useDraggableScroll({ direction: 'horizontal' });
   
   return (
-    <div className="sticky top-0 z-20 bg-wafu-bg/95 backdrop-blur-xl border-b border-wafu-border pb-2 pt-2 px-0 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] transition-all">
+    <div className="sticky top-0 z-20 bg-wafu-bg/85 backdrop-blur-xl border-b border-white/20 pb-2 pt-2 px-0 shadow-glass transition-all">
       <div 
         ref={scrollLogic.ref}
         {...scrollLogic.events}
-        className={`flex overflow-x-auto gap-2 px-4 pb-1 ${scrollLogic.className}`}
+        className={`flex overflow-x-auto gap-3 px-5 pb-1 ${scrollLogic.className}`}
       >
         <button
           type="button"
           onClick={() => scrollLogic.onEntryClick(() => setSelectedDay(0))}
-          className={`shrink-0 flex items-center justify-center gap-2 px-4 h-[46px] rounded-xl border transition-all duration-100 active-bounce relative overflow-hidden group
+          className={`shrink-0 flex items-center justify-center gap-2 px-4 h-[44px] rounded-xl border transition-all duration-300 active-bounce relative overflow-hidden group
             ${selectedDay === 0 
-              ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' 
-              : 'bg-white text-stone-400 border-stone-200 hover:border-wafu-indigo/30 hover:bg-stone-50'}`}
+              ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-lg gold-glow ring-1 ring-wafu-indigo/50' 
+              : 'bg-white/80 text-stone-400 border-transparent hover:border-wafu-indigo/20 hover:bg-white shadow-sm'}`}
         >
-           <span className="text-xs font-serif font-bold whitespace-nowrap">準備</span>
-           {selectedDay === 0 && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-wafu-gold"></div>}
+           <span className="text-xs font-serif font-bold whitespace-nowrap tracking-widest">準備</span>
+           {selectedDay === 0 && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gold-leaf"></div>}
         </button>
         
         {DATES.map((date, idx) => {
@@ -229,20 +230,20 @@ const DateSelector = ({
               key={date}
               type="button"
               onClick={() => scrollLogic.onEntryClick(() => setSelectedDay(dayNum))}
-              className={`shrink-0 flex items-center justify-center gap-2 px-3 h-[46px] rounded-xl border transition-all duration-100 active-bounce relative overflow-hidden shadow-sm
+              className={`shrink-0 flex items-center justify-center gap-2 px-3 h-[44px] rounded-xl border transition-all duration-300 active-bounce relative overflow-hidden
                 ${isSelected 
-                  ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' 
-                  : 'bg-white text-stone-500 border-stone-200 hover:border-wafu-indigo/30 hover:bg-white/80'}`}
+                  ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-lg gold-glow ring-1 ring-wafu-indigo/50' 
+                  : 'bg-white/80 text-stone-500 border-transparent hover:border-wafu-indigo/20 hover:bg-white shadow-sm'}`}
             >
               {isSelected && (
-                <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/washi.png')]"></div>
+                <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/washi.png')] mix-blend-overlay"></div>
               )}
-              {isSelected && <div className="absolute top-0 right-0 w-3 h-3 bg-gold-leaf opacity-80" style={{clipPath: 'polygon(100% 0, 0 0, 100% 100%)'}}></div>}
+              {isSelected && <div className="absolute top-0 right-0 w-4 h-4 bg-gold-leaf opacity-100" style={{clipPath: 'polygon(100% 0, 0 0, 100% 100%)'}}></div>}
 
-              <div className="flex flex-col items-start leading-none gap-0.5">
-                 <span className={`text-xs font-serif font-bold ${isSelected ? 'text-white' : 'text-wafu-indigo'}`}>{dayLabel}</span>
-                 <div className={`text-[9px] tracking-tighter font-mono flex gap-0.5 ${isSelected ? 'text-white/80' : 'text-stone-300'}`}>
-                   <span>{dateParts[0]}</span>.<span>{dateParts[1]}</span>
+              <div className="flex flex-col items-start leading-none gap-1">
+                 <span className={`text-xs font-serif font-bold tracking-widest ${isSelected ? 'text-white' : 'text-wafu-indigo'}`}>{dayLabel}</span>
+                 <div className={`text-[9px] tracking-tighter font-mono flex gap-0.5 ${isSelected ? 'text-white/70' : 'text-stone-300'}`}>
+                   <span>{dateParts[0]}</span><span className="opacity-50">/</span><span>{dateParts[1]}</span>
                  </div>
               </div>
             </button>
@@ -379,7 +380,7 @@ export default function App() {
   };
 
   return (
-    <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base">
+    <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base ring-1 ring-black/5">
       
       {/* Database Error Overlay */}
       {dbError && (
@@ -417,30 +418,31 @@ export default function App() {
       ))}
 
       {/* Header - Luxury Sakura - REDUCED HEIGHT BUT LARGER FONT */}
-      <div className="relative z-30 pt-10 pb-2 px-5 flex justify-between items-center bg-wafu-bg/90 backdrop-blur-md border-b border-wafu-indigo/5 shadow-sm shrink-0">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gold-leaf"></div>
+      <div className="relative z-30 pt-10 pb-3 px-5 flex justify-between items-center bg-wafu-bg/85 backdrop-blur-xl border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.02)] shrink-0 transition-all duration-300">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-wafu-gold/20 via-wafu-gold to-wafu-gold/20"></div>
 
-        <div className="flex items-center gap-4 cursor-pointer active-bounce" onClick={triggerSakura}>
+        <div className="flex items-center gap-4 cursor-pointer active-bounce group" onClick={triggerSakura}>
            {/* Sakura Crest - Larger Size */}
-           <div className={`w-12 h-12 relative shrink-0 text-wafu-indigo ${isSpinning ? 'animate-jump-spin' : ''}`}>
+           <div className={`w-12 h-12 relative shrink-0 text-wafu-indigo filter drop-shadow-sm group-hover:drop-shadow-md transition-all ${isSpinning ? 'animate-jump-spin' : ''}`}>
               <Icons.Sakura />
            </div>
            <div>
              {/* Title - Tweaked to text-2xl as requested */}
-             <h1 className="text-2xl font-serif font-black text-wafu-indigo tracking-[0.15em] leading-none text-gold-leaf mb-1">
+             <h1 className="text-2xl font-serif font-black text-wafu-indigo tracking-[0.2em] leading-none text-gold-leaf mb-1 drop-shadow-sm">
                京都八日遊
              </h1>
-             <p className="text-[9px] text-wafu-gold font-bold tracking-[0.4em] uppercase opacity-80 pl-0.5">Kyoto Journey</p>
+             <p className="text-[9px] text-wafu-gold font-bold tracking-[0.4em] uppercase opacity-90 pl-0.5 font-serif">Kyoto Journey</p>
            </div>
         </div>
         <a 
           href="https://www.vjw.digital.go.jp/" 
           target="_blank" 
           rel="noreferrer"
-          className="group relative flex flex-col items-center justify-center w-8 h-8 bg-wafu-indigo text-white rounded-lg shadow-md hover:bg-wafu-darkIndigo transition-all duration-100 active-bounce overflow-hidden border border-wafu-indigo"
+          className="group relative flex flex-col items-center justify-center w-9 h-9 bg-wafu-indigo text-white rounded-xl shadow-lg hover:shadow-xl hover:bg-wafu-darkIndigo transition-all duration-300 active-bounce overflow-hidden ring-1 ring-white/20"
         >
-          <div className="scale-90"><Icons.QrCode /></div>
-          <div className="absolute bottom-0.5 right-0.5 w-1 h-1 bg-wafu-gold rounded-full shadow-sm"></div>
+          <div className="scale-90 opacity-90 group-hover:opacity-100 transition-opacity"><Icons.QrCode /></div>
+          <div className="absolute bottom-1 right-1 w-1 h-1 bg-gold-leaf rounded-full shadow-[0_0_5px_rgba(255,255,255,0.8)]"></div>
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </a>
       </div>
 
@@ -497,13 +499,16 @@ export default function App() {
           {activeTab === 'flight' && (
              <div className="pt-8 px-6 min-h-screen bg-seigaiha bg-fixed pb-32">
                 <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
-                    <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2">機票資訊</h2>
-                    <p className="text-sm font-bold text-stone-400 uppercase tracking-widest">Booking Ref: FO7V9A</p>
+                    <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>
+                    <p className="text-sm font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                      <span>Booking Ref:</span>
+                      <span className="text-wafu-gold font-mono">FO7V9A</span>
+                    </p>
                 </div>
                 
-                <h3 className="text-sm font-bold text-wafu-indigo mb-3 ml-2 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-gold-leaf"></span>
-                    去程 (Outbound)
+                <h3 className="text-sm font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
+                    <span className="tracking-widest">去程 (Outbound)</span>
                 </h3>
                 <FlightPass 
                   originCode="TPE" originCity="Taipei" 
@@ -514,9 +519,9 @@ export default function App() {
                   seat="12A, 12B"
                 />
 
-                <h3 className="text-sm font-bold text-wafu-indigo mb-3 ml-2 flex items-center gap-2 mt-8">
-                    <span className="w-2 h-2 rounded-full bg-wafu-indigo"></span>
-                    回程 (Inbound)
+                <h3 className="text-sm font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
+                    <div className="w-1.5 h-1.5 rounded-full bg-wafu-indigo shadow-[0_0_8px_rgba(24,54,84,0.6)]"></div>
+                    <span className="tracking-widest">回程 (Inbound)</span>
                 </h3>
                 <FlightPass 
                   originCode="KIX" originCity="Osaka" 
@@ -532,71 +537,74 @@ export default function App() {
         </div>
       </div>
 
-      {/* Bottom Navigation with iOS Safe Area Padding */}
-      <div className="bg-wafu-paper/90 backdrop-blur-xl border-t border-wafu-border grid grid-cols-6 px-1 pt-2 z-50 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] relative pb-[env(safe-area-inset-bottom)]">
+      {/* Bottom Navigation with iOS Safe Area Padding - GLASS EFFECT */}
+      <div className="bg-wafu-paper/85 backdrop-blur-xl border-t border-white/50 grid grid-cols-6 px-1 pt-2 z-50 shrink-0 shadow-[0_-5px_25px_rgba(24,54,84,0.05)] relative pb-[env(safe-area-inset-bottom)]">
+        {/* Subtle highlight line at top */}
+        <div className="absolute top-0 left-0 w-full h-px bg-white/60"></div>
+
         <button 
           onClick={() => setActiveTab('itinerary')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-100 active-bounce py-2 ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/70'}`}
+          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
         >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'itinerary' ? 'transform -translate-y-1' : ''}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'itinerary' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
              <Icons.Calendar />
           </div>
-          <span className={`text-[8px] font-bold tracking-widest transition-all ${activeTab === 'itinerary' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-70'}`}>行程</span>
+          <span className={`text-[9px] font-bold tracking-widest transition-all ${activeTab === 'itinerary' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>行程</span>
         </button>
 
         <button 
           onClick={() => setActiveTab('sightseeing')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-100 active-bounce py-2 ${activeTab === 'sightseeing' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/70'}`}
+          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'sightseeing' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
         >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'sightseeing' ? 'transform -translate-y-1' : ''}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'sightseeing' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
              <Icons.MapPin />
           </div>
-          <span className={`text-[8px] font-bold tracking-widest transition-all ${activeTab === 'sightseeing' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-70'}`}>景點</span>
+          <span className={`text-[9px] font-bold tracking-widest transition-all ${activeTab === 'sightseeing' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>景點</span>
         </button>
 
         <button 
           onClick={() => setActiveTab('food')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-100 active-bounce py-2 ${activeTab === 'food' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/70'}`}
+          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'food' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
         >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'food' ? 'transform -translate-y-1' : ''}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'food' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
              <Icons.Utensils />
           </div>
-          <span className={`text-[8px] font-bold tracking-widest transition-all ${activeTab === 'food' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-70'}`}>美食</span>
+          <span className={`text-[9px] font-bold tracking-widest transition-all ${activeTab === 'food' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>美食</span>
         </button>
 
         <button 
           onClick={() => setActiveTab('money')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-100 active-bounce py-2 ${activeTab === 'money' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/70'}`}
+          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'money' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
         >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'money' ? 'transform -translate-y-1' : ''}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'money' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
              <Icons.Wallet />
           </div>
-          <span className={`text-[8px] font-bold tracking-widest transition-all ${activeTab === 'money' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-70'}`}>記帳</span>
+          <span className={`text-[9px] font-bold tracking-widest transition-all ${activeTab === 'money' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>記帳</span>
         </button>
 
         <button 
           onClick={() => setActiveTab('shop')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-100 active-bounce py-2 ${activeTab === 'shop' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/70'}`}
+          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'shop' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
         >
-          <div className={`relative p-1 transition-all duration-500 ease-out ${activeTab === 'shop' ? 'transform -translate-y-1' : ''}`}>
+          <div className={`relative p-1 transition-all duration-500 ease-out ${activeTab === 'shop' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
              <Icons.ShoppingBag />
              {shoppingItems.filter(i => !i.bought && !i.deleted).length > 0 && (
-               <span className="absolute -top-1 -right-1 bg-wafu-gold text-wafu-indigo text-[8px] w-3.5 h-3.5 flex items-center justify-center rounded-full border border-white shadow-sm font-bold">
+               <span className="absolute -top-1 -right-1 bg-gold-leaf text-white text-[8px] w-3.5 h-3.5 flex items-center justify-center rounded-full border border-white shadow-sm font-bold animate-pop">
                  {shoppingItems.filter(i => !i.bought && !i.deleted).length}
                </span>
              )}
           </div>
-          <span className={`text-[8px] font-bold tracking-widest transition-all ${activeTab === 'shop' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-70'}`}>伴手禮</span>
+          <span className={`text-[9px] font-bold tracking-widest transition-all ${activeTab === 'shop' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>伴手禮</span>
         </button>
         
         <button 
           onClick={() => setActiveTab('flight')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-100 active-bounce py-2 ${activeTab === 'flight' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/70'}`}
+          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'flight' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
         >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'flight' ? 'transform -translate-y-1' : ''}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'flight' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
              <Icons.Ticket />
           </div>
-          <span className={`text-[8px] font-bold tracking-widest transition-all ${activeTab === 'flight' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-70'}`}>機票</span>
+          <span className={`text-[9px] font-bold tracking-widest transition-all ${activeTab === 'flight' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>機票</span>
         </button>
       </div>
     </div>
