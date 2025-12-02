@@ -87,7 +87,9 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
 
     let lat = itemForm.lat;
     let lng = itemForm.lng;
-    if (itemForm.mapsUrl && (!lat || !lng)) {
+    
+    // Check mapsUrl strictly to allow overwriting existing coordinates
+    if (itemForm.mapsUrl) {
         const coords = parseCoordinatesFromUrl(itemForm.mapsUrl);
         if (coords) {
             lat = coords.lat;

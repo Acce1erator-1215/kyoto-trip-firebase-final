@@ -53,7 +53,9 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
 
     let lat = form.lat;
     let lng = form.lng;
-    if (form.mapsUrl && (!lat || !lng)) {
+    
+    // Check mapsUrl strictly to allow overwriting existing coordinates
+    if (form.mapsUrl) {
         const coords = parseCoordinatesFromUrl(form.mapsUrl);
         if (coords) {
             lat = coords.lat;
