@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { ShoppingItem, Expense } from '../types';
 import { Icons } from './Icon';
@@ -11,9 +10,10 @@ interface Props {
   setItems: any; // Legacy
   expenses: Expense[];
   setExpenses: any; // Legacy
+  currentRate?: number;
 }
 
-export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
+export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0.22 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const exchangeRate = 0.22;
+  const exchangeRate = currentRate;
 
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
@@ -271,8 +271,22 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
                                 NT$ {totalPriceTwd.toLocaleString()}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-wafu-indigo bg-stone-50 px-2 py-1 rounded-lg border border-stone-100">
-                             <span>x{qty}</span>
+                        
+                        {/* Quantity Controls */}
+                        <div className="flex items-center bg-stone-50 rounded-lg border border-stone-100 h-6">
+                             <button 
+                                onClick={() => updateQuantity(item.id, -1, item)}
+                                className="px-1.5 h-full flex items-center justify-center text-stone-400 hover:text-wafu-indigo active:bg-stone-200"
+                             >
+                                -
+                             </button>
+                             <span className="text-xs font-bold text-wafu-indigo px-1">{qty}</span>
+                             <button 
+                                onClick={() => updateQuantity(item.id, 1, item)}
+                                className="px-1.5 h-full flex items-center justify-center text-stone-400 hover:text-wafu-indigo active:bg-stone-200"
+                             >
+                                +
+                             </button>
                         </div>
                     </div>
                 </div>

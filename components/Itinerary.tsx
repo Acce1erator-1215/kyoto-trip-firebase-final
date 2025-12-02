@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { ItineraryItem, Category, CATEGORIES, DATES } from '../types';
 import { Icons } from './Icon';
@@ -152,7 +151,8 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
           </div>
           
           {!isTodo && (
-            <div className="writing-vertical text-right h-20 text-xs font-serif font-bold text-wafu-gold tracking-widest border-l border-wafu-indigo/20 pl-3">
+            // Lifted the date higher with mt-[-0.5rem] to avoid overlapping list items below
+            <div className="writing-vertical text-right h-20 text-xs font-serif font-bold text-wafu-gold tracking-widest border-l border-wafu-indigo/20 pl-3 mt-[-0.5rem] z-0">
               {dayDate.replace(/-/g, '.')}
             </div>
           )}
@@ -160,7 +160,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
       </div>
 
       {/* List */}
-      <div className="space-y-6 px-3 sm:px-5 relative">
+      <div className="space-y-6 px-3 sm:px-5 relative z-10">
         {!isTodo && items.length > 0 && (
            <div className="absolute left-[3.5rem] top-4 bottom-8 w-0.5 bg-gradient-to-b from-wafu-gold via-wafu-goldLight to-transparent z-0 opacity-50"></div>
         )}

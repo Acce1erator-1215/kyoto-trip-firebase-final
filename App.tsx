@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, MouseEvent, useEffect } from 'react';
 import { ItineraryItem, Expense, ShoppingItem, Restaurant, SightseeingSpot, DATES } from './types';
 import { Itinerary } from './components/Itinerary';
@@ -8,6 +7,7 @@ import { SightseeingList } from './components/SightseeingList';
 import { ExpenseTracker } from './components/ExpenseTracker';
 import { Icons } from './components/Icon';
 import { INITIAL_ITINERARY } from './services/mockData';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Firebase Imports
 import { db } from './firebase';
@@ -43,28 +43,45 @@ const FlightPass = ({
   const handleFlightClick = () => {
     if(isFlying) return;
     setIsFlying(true);
-    setTimeout(() => setIsFlying(false), 4000); // 4 seconds cruise
+    setTimeout(() => setIsFlying(false), 3000); // Extended to 8 seconds
   };
 
   return (
     <div 
       onClick={handleFlightClick}
-      className={`bg-white rounded-3xl shadow-luxury border border-stone-100 overflow-hidden relative mb-6 transition-all duration-300 cursor-pointer active:scale-[0.98] select-none group 
+      className={`bg-white rounded-3xl shadow-luxury border border-stone-100 overflow-hidden relative mb-6 transition-all duration-300 cursor-pointer select-none group 
       ${isFlying ? 'animate-card-bump' : 'hover:scale-[1.01] hover:shadow-2xl'}`}
     >
       <div className="absolute inset-0 bg-wafu-paper opacity-60 pointer-events-none mix-blend-multiply"></div>
       
-      {/* Header Strip - Luxury Gold Inlay look */}
+      {/* Header Strip */}
       <div className={`h-1.5 w-full absolute top-0 ${isReturn ? 'bg-wafu-indigo' : 'bg-gold-leaf shadow-md'}`}></div>
       
-      {/* Wind Streams for Speed Effect */}
+      {/* Wind Streams for Speed Effect - BREEZE OVERLAY (Updated to Gold) */}
       {isFlying && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-[30%] right-[-10%] w-32 h-0.5 bg-wafu-gold/20 animate-wind-stream" style={{animationDelay: '0s'}}></div>
-            <div className="absolute top-[45%] right-[-20%] w-48 h-[1px] bg-wafu-indigo/10 animate-wind-stream" style={{animationDelay: '0.2s'}}></div>
-            <div className="absolute top-[60%] right-[-15%] w-24 h-0.5 bg-wafu-gold/30 animate-wind-stream" style={{animationDelay: '0.5s'}}></div>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+            <div className="absolute top-[30%] right-[-10%] w-64 h-0.5 bg-gradient-to-r from-transparent via-wafu-gold/60 to-transparent animate-wind-stream blur-[1px]" style={{animationDelay: '0s'}}></div>
+            <div className="absolute top-[50%] right-[-20%] w-96 h-[2px] bg-gradient-to-r from-transparent via-wafu-gold/80 to-transparent animate-wind-stream" style={{animationDelay: '0.1s'}}></div>
+            <div className="absolute top-[70%] right-[-15%] w-48 h-0.5 bg-gradient-to-r from-transparent via-wafu-gold/50 to-transparent animate-wind-stream" style={{animationDelay: '0.3s'}}></div>
         </div>
       )}
+      
+      {/* Flowing Gold Floor (Ground Scroll) */}
+      {isFlying && (
+        <div className="absolute bottom-0 left-0 w-full h-12 opacity-30 pointer-events-none overflow-hidden z-0">
+           {/* Uses a simple background pattern to simulate ground moving */}
+           <div 
+             className="w-[200%] h-full animate-floor-scroll"
+             style={{
+                background: `repeating-linear-gradient(90deg, transparent, transparent 20px, #BFA46F 20px, #BFA46F 22px)`
+             }}
+           ></div>
+           <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
+        </div>
+      )}
+      
+      {/* Shine Effect */}
+      {isFlying && <div className="animate-shine-sweep"></div>}
 
       <div className="p-6 pt-10 relative z-10">
          {/* Route */}
@@ -82,11 +99,6 @@ const FlightPass = ({
                      ${isFlying ? 'animate-plane-cruise' : 'rotate-45'}
                  `}>
                     <Icons.Plane />
-                    
-                    {/* Golden Trail (Exhaust) - Always on the left now as plane flies right */}
-                    {isFlying && (
-                        <div className="absolute top-1/2 -mt-0.5 right-full w-16 h-1 bg-gradient-to-r from-transparent via-[#C5A059] to-transparent blur-[1px] rounded-full opacity-60 origin-right"></div>
-                    )}
                  </div>
              </div>
              
@@ -280,6 +292,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('itinerary');
   const [selectedDay, setSelectedDay] = useState<number>(1); // 0=Todo, 1..8
   const [dbError, setDbError] = useState(false);
+  const [currentRate, setCurrentRate] = useState<number>(0.22); // Default
   
   // -- Cloud Data States --
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([]);
@@ -290,6 +303,25 @@ export default function App() {
 
   // Guard to prevent multiple seeded writes in a single session
   const seedAttempted = useRef(false);
+
+  // -- Live Exchange Rate Fetcher --
+  useEffect(() => {
+    const fetchRate = async () => {
+        try {
+            const res = await fetch('https://api.exchangerate-api.com/v4/latest/JPY');
+            const data = await res.json();
+            if (data && data.rates && data.rates.TWD) {
+                setCurrentRate(data.rates.TWD);
+            }
+        } catch (e) {
+            console.error("Failed to fetch exchange rate", e);
+        }
+    };
+    
+    fetchRate(); // Initial fetch
+    const interval = setInterval(fetchRate, 3600000); // Update every hour (3600000 ms)
+    return () => clearInterval(interval);
+  }, []);
 
   // -- Firebase Real-time Listeners --
   useEffect(() => {
@@ -403,7 +435,7 @@ export default function App() {
 
   return (
     <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base ring-1 ring-black/5">
-      
+      <SpeedInsights />
       {/* Database Error Overlay */}
       {dbError && (
         <div className="fixed inset-0 z-[10000] bg-black/80 flex flex-col items-center justify-center text-white p-8 text-center backdrop-blur-md">
@@ -453,7 +485,7 @@ export default function App() {
              <h1 className="text-2xl font-serif font-black text-wafu-indigo tracking-[0.2em] leading-none text-gold-leaf mb-1 drop-shadow-sm">
                京都八日遊
              </h1>
-             <p className="text-[9px] text-wafu-gold font-bold tracking-[0.4em] uppercase opacity-90 pl-0.5 font-serif">Kyoto Journey</p>
+             <p className="text-[14px] text-wafu-gold font-bold tracking-[0.4em] uppercase opacity-90 pl-0.5 font-serif">Kyoto Journey</p>
            </div>
         </div>
         <a 
@@ -508,13 +540,13 @@ export default function App() {
 
           {activeTab === 'money' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <ExpenseTracker expenses={expenses} setExpenses={() => {}} />
+              <ExpenseTracker expenses={expenses} setExpenses={() => {}} currentRate={currentRate} />
             </div>
           )}
 
           {activeTab === 'shop' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <ShoppingList items={shoppingItems} setItems={() => {}} expenses={expenses} setExpenses={() => {}} />
+              <ShoppingList items={shoppingItems} setItems={() => {}} expenses={expenses} setExpenses={() => {}} currentRate={currentRate} />
             </div>
           )}
           
@@ -528,7 +560,7 @@ export default function App() {
                     </p>
                 </div>
                 
-                <h3 className="text-sm font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
+                <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
                     <span className="tracking-widest">去程 (Outbound)</span>
                 </h3>
@@ -541,7 +573,7 @@ export default function App() {
                   seat="12A, 12B"
                 />
 
-                <h3 className="text-sm font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
+                <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
                     <div className="w-1.5 h-1.5 rounded-full bg-wafu-indigo shadow-[0_0_8px_rgba(24,54,84,0.6)]"></div>
                     <span className="tracking-widest">回程 (Inbound)</span>
                 </h3>

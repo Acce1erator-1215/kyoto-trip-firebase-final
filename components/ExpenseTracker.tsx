@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Expense } from '../types';
 import { Icons } from './Icon';
@@ -8,15 +7,22 @@ import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 interface Props {
   expenses: Expense[];
   setExpenses: any; // Legacy
+  currentRate?: number;
 }
 
-export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
+export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showTrash, setShowTrash] = useState(false);
   
-  // Global Settings State (In a real app, this might be context)
-  const [exchangeRate, setExchangeRate] = useState(0.215);
+  // Local state for manual override, but defaults to prop
+  const [exchangeRate, setExchangeRate] = useState(currentRate);
+  
+  // Sync prop changes if user hasn't manually edited (simplified logic: always sync on prop change)
+  useEffect(() => {
+      setExchangeRate(currentRate);
+  }, [currentRate]);
+
   const [isEditingRate, setIsEditingRate] = useState(false);
 
   // Form State
@@ -261,10 +267,10 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
             </div>
 
             <div className="relative z-10 flex justify-between items-center mt-2 border-t border-stone-100 pt-2">
-               <div className="flex flex-col items-center gap-1 bg-stone-50 p-1 rounded-lg border border-stone-100 flex-row" onClick={e => e.stopPropagation()}>
-                  {/* Larger Buttons for Touch */}
+               {/* Horizontal Buttons */}
+               <div className="flex items-center gap-1 bg-stone-50 p-1 rounded-lg border border-stone-100" onClick={e => e.stopPropagation()}>
                   <button onClick={() => updateExpenseQuantity(ex.id, -1, ex)} className="text-stone-400 hover:text-wafu-indigo active-bounce w-8 h-8 flex items-center justify-center font-bold text-lg bg-white rounded-md shadow-sm border border-stone-100">-</button>
-                  <span className="text-sm font-bold text-wafu-indigo font-mono w-6 text-center">{ex.quantity || 1}</span>
+                  <span className="text-sm font-bold text-wafu-indigo font-mono w-8 text-center">{ex.quantity || 1}</span>
                   <button onClick={() => updateExpenseQuantity(ex.id, 1, ex)} className="text-stone-400 hover:text-wafu-indigo active-bounce w-8 h-8 flex items-center justify-center font-bold text-lg bg-white rounded-md shadow-sm border border-stone-100">+</button>
                </div>
                
@@ -279,7 +285,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
             </div>
             
             {ex.notes && (
-                <div className="relative z-10 text-xs text-stone-500 bg-stone-50 p-2 rounded-lg mt-1 italic">
+                <div className="relative z-10 text-xs text-stone-500 bg-stone-50 p-2 rounded-lg mt-1">
                     {ex.notes}
                 </div>
             )}
