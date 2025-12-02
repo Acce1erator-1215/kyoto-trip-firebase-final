@@ -455,7 +455,7 @@ export default function App() {
      setIsSpinning(true);
      setTimeout(() => setIsSpinning(false), 2500); 
 
-     // Generate Standard Petals (Increased to 1000)
+     // Generate Standard Petals (Increased to 100)
      const newPetals: Petal[] = Array.from({ length: 100 }).map((_, i) => ({
          id: Date.now() + i,
          type: 'petal',

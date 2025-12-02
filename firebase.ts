@@ -17,16 +17,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize App Check with reCAPTCHA v3
-if (typeof window !== 'undefined') {
-  // STRICT ALLOWLIST: Only initialize App Check on domains explicitly registered 
-  // in the Google reCAPTCHA Admin Console.
-  // This prevents "ReCAPTCHA error" on localhost, Vercel previews, or other dev environments.
+// FIX FOR ERRORS: Set this to true ONLY after you have registered your domains 
+// (localhost, vercel.app, firebaseapp.com) in the Google reCAPTCHA Admin Console.
+const ENABLE_APP_CHECK = false; 
+
+if (typeof window !== 'undefined' && ENABLE_APP_CHECK) {
   const allowedDomains = [
     "kyoyo-trip-store.firebaseapp.com",
     "kyoyo-trip-store.web.app"
   ];
   
-  if (allowedDomains.includes(location.hostname)) {
+  // Check if current hostname is allowed
+  const isAllowed = allowedDomains.includes(location.hostname);
+
+  if (isAllowed) {
     try {
       initializeAppCheck(app, {
         provider: new ReCaptchaV3Provider('6LfbRx8sAAAAAGMry9PFCHoF29WgEwKOqhdjgYyU'),
@@ -37,7 +41,6 @@ if (typeof window !== 'undefined') {
       console.warn("App Check initialization failed:", e);
     }
   } else {
-    // Silently skip on other domains (localhost, previews, etc.)
     console.debug(`App Check skipped for hostname: ${location.hostname}`);
   }
 }

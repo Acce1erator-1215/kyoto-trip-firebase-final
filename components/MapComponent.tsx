@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { ItineraryItem, Restaurant, SightseeingSpot } from '../types';
 
@@ -30,11 +29,13 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
             center: [KYOTO_CENTER.lat, KYOTO_CENTER.lng],
             zoom: 13,
             zoomControl: false, // Cleaner look
-            attributionControl: false
+            attributionControl: false,
+            dragging: true
+            // Removed tap: true as it causes issues in modern browsers
         });
 
-        // OpenStreetMap Layer (Free)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        // OpenStreetMap Layer (Free) with cache busting
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?v=2', {
             maxZoom: 19,
             subdomains: 'abcd',
         }).addTo(map);
@@ -178,9 +179,23 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     }
   }, [userLocation]);
 
+  // Stop propagation to prevent parent draggable scroll from interfering
+  const stopPropagation = (e: React.SyntheticEvent | React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <>
-      <div ref={mapContainerRef} className="w-full h-full z-0 relative" style={{background: '#f5f5f5'}} />
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-full z-0 relative"
+        style={{background: '#f5f5f5'}} 
+        // Intercept events to prevent parent drag logic
+        // Only blocking START events is enough to prevent parent drag
+        onMouseDown={stopPropagation}
+        onTouchStart={stopPropagation}
+        // Removed Move/Wheel blocks to allow Leaflet to handle drag/zoom
+      />
     </>
   );
 };
