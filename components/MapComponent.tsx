@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { ItineraryItem, Restaurant, SightseeingSpot } from '../types';
 
@@ -15,6 +16,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
   const mapInstanceRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
   const itemMarkersRef = useRef<any[]>([]);
+  const hasFittedBounds = useRef(false);
 
   // Default: Kyoto Station
   const KYOTO_CENTER = { lat: 34.9858, lng: 135.7588 };
@@ -121,10 +123,11 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     }
 
     // Only auto-fit if we are NOT focusing on a specific location
-    // OR if this is the initial load/update
-    if (!focusedLocation) {
+    // AND we haven't fitted bounds yet (to avoid jumping on data updates)
+    if (!focusedLocation && !hasFittedBounds.current) {
         if (itemMarkersRef.current.length > 0 || userLocation) {
             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            hasFittedBounds.current = true;
         }
     }
 
@@ -139,6 +142,8 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
           animate: true,
           duration: 1.5
       });
+      // Allow auto-fit to happen again if user navigates away and comes back?
+      // Or keep it locked. Usually flyTo is a manual action, so we respect it.
 
   }, [focusedLocation]);
 
