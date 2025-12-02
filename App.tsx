@@ -21,6 +21,7 @@ type Tab = 'itinerary' | 'sightseeing' | 'food' | 'money' | 'shop' | 'flight';
 // Petal for animation
 interface Petal {
   id: number;
+  type: 'petal' | 'pollen'; // New type to support particles
   left: string;
   duration: string;
   delay: string;
@@ -67,6 +68,21 @@ const FlightPass = ({
             <div className="absolute top-[70%] right-[-15%] w-48 h-0.5 bg-gradient-to-r from-transparent via-wafu-gold/50 to-transparent animate-wind-stream" style={{animationDelay: '0.3s'}}></div>
         </div>
       )}
+
+      {/* Passing Clouds - NEW */}
+      {isFlying && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+            <div className="absolute top-8 right-[-20%] text-white/50 animate-cloud-pass opacity-0" style={{animationDuration: '3s', animationDelay: '0s'}}>
+                <Icons.Cloud className="w-16 h-16 blur-[1px]" />
+            </div>
+            <div className="absolute top-24 right-[-20%] text-white/30 animate-cloud-pass opacity-0" style={{animationDuration: '2s', animationDelay: '1.2s'}}>
+                <Icons.Cloud className="w-10 h-10 blur-[2px]" />
+            </div>
+             <div className="absolute top-40 right-[-20%] text-white/20 animate-cloud-pass opacity-0" style={{animationDuration: '4s', animationDelay: '2.5s'}}>
+                <Icons.Cloud className="w-20 h-20 blur-[3px]" />
+            </div>
+        </div>
+      )}
       
       {/* Flowing Gold Floor (Ground Scroll) */}
       {isFlying && (
@@ -96,6 +112,11 @@ const FlightPass = ({
            <div className="flex-1 px-4 flex flex-col items-center opacity-80 group-hover:opacity-100 transition-opacity">
              {/* Plane Icon with Cruise Animation */}
              <div className="relative z-10 w-8 h-8 flex items-center justify-center">
+                 {/* Engine Trail - NEW */}
+                 {isFlying && (
+                    <div className="absolute right-[50%] top-1/2 -mt-1 w-24 h-2 bg-gradient-to-l from-wafu-gold/60 to-transparent blur-sm rounded-full transform translate-x-1 origin-right opacity-80"></div>
+                 )}
+
                  {/* The icon naturally points Top-Right. rotate-45 makes it point Right (Horizontal). */}
                  <div className={`text-wafu-gold transition-all duration-500 relative
                      ${isFlying ? 'animate-plane-cruise' : 'rotate-45'}
@@ -434,8 +455,10 @@ export default function App() {
      setIsSpinning(true);
      setTimeout(() => setIsSpinning(false), 2500); 
 
-     const newPetals: Petal[] = Array.from({ length: 30 }).map((_, i) => ({
+     // Generate Standard Petals (Increased to 1000)
+     const newPetals: Petal[] = Array.from({ length: 100 }).map((_, i) => ({
          id: Date.now() + i,
+         type: 'petal',
          left: `${Math.random() * 100}%`,
          duration: `${Math.random() * 5 + 6}s`, 
          delay: `${Math.random() * 3}s`,
@@ -445,9 +468,24 @@ export default function App() {
          depthBlur: Math.random() > 0.7 ? 'blur-[1px]' : 'blur-[0px]'
      }));
      
-     setSakuraPetals(prev => [...prev, ...newPetals]);
+     // Generate Pollen Particles (New - 30 dots)
+     const newParticles: Petal[] = Array.from({ length: 30 }).map((_, i) => ({
+         id: Date.now() + 1000 + i,
+         type: 'pollen',
+         left: `${Math.random() * 100}%`,
+         duration: `${Math.random() * 4 + 8}s`, 
+         delay: `${Math.random() * 2}s`,
+         size: Math.random() * 1 + 1, // Small dots
+         color: 'bg-wafu-gold', // Golden pollen
+         swayX: `${(Math.random() - 0.5) * 100}px`,
+         depthBlur: ''
+     }));
+
+     setSakuraPetals(prev => [...prev, ...newPetals, ...newParticles]);
+     
+     // Cleanup after animation
      setTimeout(() => {
-        setSakuraPetals(prev => prev.filter(p => !newPetals.includes(p)));
+        setSakuraPetals(prev => prev.filter(p => !newPetals.includes(p) && !newParticles.includes(p)));
      }, 14000);
   };
 
@@ -474,7 +512,7 @@ export default function App() {
       {sakuraPetals.map(petal => (
         <div
           key={petal.id}
-          className={`fixed z-50 pointer-events-none animate-sakura-fall ${petal.color} ${petal.depthBlur}`}
+          className={`fixed z-50 pointer-events-none animate-sakura-fall ${petal.depthBlur}`}
           style={{
             left: petal.left,
             width: petal.size,
@@ -484,7 +522,13 @@ export default function App() {
             '--sway-x': petal.swayX, 
           } as React.CSSProperties}
         >
-          <Icons.SakuraPetal />
+          {petal.type === 'petal' ? (
+              <div className={petal.color}>
+                <Icons.SakuraPetal />
+              </div>
+          ) : (
+              <div className={`w-full h-full rounded-full opacity-60 ${petal.color}`}></div>
+          )}
         </div>
       ))}
 

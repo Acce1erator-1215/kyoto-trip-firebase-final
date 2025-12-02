@@ -17,19 +17,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize App Check with reCAPTCHA v3
-// Only initialize in production/deployed environment to avoid "ReCAPTCHA error" on localhost
-// because localhost is not whitelisted in the reCAPTCHA console.
 if (typeof window !== 'undefined') {
-  const isLocalhost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  // STRICT ALLOWLIST: Only initialize App Check on domains explicitly registered 
+  // in the Google reCAPTCHA Admin Console.
+  // This prevents "ReCAPTCHA error" on localhost, Vercel previews, or other dev environments.
+  const allowedDomains = [
+    "kyoyo-trip-store.firebaseapp.com",
+    "kyoyo-trip-store.web.app"
+  ];
   
-  if (!isLocalhost) {
-    initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('6LfbRx8sAAAAAGMry9PFCHoF29WgEwKOqhdjgYyU'),
-      isTokenAutoRefreshEnabled: true
-    });
+  if (allowedDomains.includes(location.hostname)) {
+    try {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider('6LfbRx8sAAAAAGMry9PFCHoF29WgEwKOqhdjgYyU'),
+        isTokenAutoRefreshEnabled: true
+      });
+      console.debug("App Check initialized.");
+    } catch (e) {
+      console.warn("App Check initialization failed:", e);
+    }
   } else {
-    // Optional: Log to confirm it's skipped
-    console.debug("App Check skipped on localhost to avoid ReCAPTCHA errors.");
+    // Silently skip on other domains (localhost, previews, etc.)
+    console.debug(`App Check skipped for hostname: ${location.hostname}`);
   }
 }
 

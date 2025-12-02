@@ -223,6 +223,17 @@
         animation: wind-stream 1.0s linear infinite; /* Faster from 1.5s */
       }
 
+      /* Cloud Pass Animation */
+      @keyframes cloud-pass {
+        0% { transform: translateX(100%); opacity: 0; }
+        10% { opacity: 0.6; }
+        90% { opacity: 0.6; }
+        100% { transform: translateX(-150%); opacity: 0; }
+      }
+      .animate-cloud-pass {
+        animation: cloud-pass linear infinite;
+      }
+
       /* Floor Scroll Animation - FASTER (0.3s) */
       @keyframes floor-scroll {
         0% { background-position: 0 0; }

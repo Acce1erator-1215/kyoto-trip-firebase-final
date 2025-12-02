@@ -31,6 +31,7 @@ export const Icons = {
     </svg>
   ),
   MapLink: ({ className, strokeWidth = 2 }: IconProps) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>,
+  Cloud: ({ className, strokeWidth = 2 }: IconProps) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M17.5,19c-3.037,0-5.5-2.463-5.5-5.5c0-1.025,0.283-1.984,0.769-2.812C12.378,10.258,11.716,10,11,10c-3.866,0-7,3.134-7,7s3.134,7,7,7h7.5c2.485,0,4.5-2.015,4.5-4.5S20.985,15,18.5,15H17.5V19z M17.5,13c-1.381,0-2.5,1.119-2.5,2.5s1.119,2.5,2.5,2.5h1.0c1.381,0,2.5-1.119,2.5-2.5S19.881,13,18.5,13H17.5z M6,17c0-2.761,2.239-5,5-5c0.573,0,1.121,0.098,1.633,0.279C12.285,10.605,12,8.847,12,7c0-3.866,3.134-7,7-7s7,3.134,7,7c0,1.93-0.784,3.682-2.05,4.982C23.955,12.394,24,12.937,24,13.5c0,3.59-2.91,6.5-6.5,6.5H6z"></path></svg>,
   
   // Sakura (Cherry Blossom) Icon - Correct Orientation (Upright)
   Sakura: ({ className }: IconProps) => (
