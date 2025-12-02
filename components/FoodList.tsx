@@ -4,6 +4,7 @@ import { Restaurant } from '../types';
 import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { resizeImage } from '../services/imageUtils';
 
 interface Props {
   items: Restaurant[];
@@ -94,14 +95,16 @@ export const FoodList: React.FC<Props> = ({ items }) => {
     await deleteDoc(doc(db, 'restaurants', id));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setForm({ ...form, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const resizedImage = await resizeImage(file);
+        setForm({ ...form, imageUrl: resizedImage });
+      } catch (error) {
+        console.error("Image upload failed", error);
+        alert("圖片處理失敗，請重試");
+      }
     }
   };
 

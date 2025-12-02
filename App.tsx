@@ -43,7 +43,7 @@ const FlightPass = ({
   const handleFlightClick = () => {
     if(isFlying) return;
     setIsFlying(true);
-    setTimeout(() => setIsFlying(false), 2500); // Updated to match animation duration
+    setTimeout(() => setIsFlying(false), 4000); // 4 seconds cruise
   };
 
   return (
@@ -57,6 +57,15 @@ const FlightPass = ({
       {/* Header Strip - Luxury Gold Inlay look */}
       <div className={`h-1.5 w-full absolute top-0 ${isReturn ? 'bg-wafu-indigo' : 'bg-gold-leaf shadow-md'}`}></div>
       
+      {/* Wind Streams for Speed Effect */}
+      {isFlying && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-[30%] right-[-10%] w-32 h-0.5 bg-wafu-gold/20 animate-wind-stream" style={{animationDelay: '0s'}}></div>
+            <div className="absolute top-[45%] right-[-20%] w-48 h-[1px] bg-wafu-indigo/10 animate-wind-stream" style={{animationDelay: '0.2s'}}></div>
+            <div className="absolute top-[60%] right-[-15%] w-24 h-0.5 bg-wafu-gold/30 animate-wind-stream" style={{animationDelay: '0.5s'}}></div>
+        </div>
+      )}
+
       <div className="p-6 pt-10 relative z-10">
          {/* Route */}
          <div className="flex items-center justify-between mb-8">
@@ -66,24 +75,17 @@ const FlightPass = ({
            </div>
            
            <div className="flex-1 px-4 flex flex-col items-center opacity-80 group-hover:opacity-100 transition-opacity">
-             {/* Plane Icon with Shoot Animation */}
+             {/* Plane Icon with Cruise Animation */}
              <div className="relative z-10 w-8 h-8 flex items-center justify-center">
-                 <div className={`text-wafu-gold transition-all duration-300 relative
-                     ${isFlying 
-                        ? (isReturn ? 'animate-plane-shoot-left' : 'animate-plane-shoot-right') 
-                        : (isReturn ? 'rotate-[185deg]' : '-rotate-5') + ' animate-fly'
-                     }
+                 {/* The icon naturally points Top-Right. rotate-45 makes it point Right (Horizontal). */}
+                 <div className={`text-wafu-gold transition-all duration-500 relative
+                     ${isFlying ? 'animate-plane-cruise' : 'rotate-45'}
                  `}>
                     <Icons.Plane />
                     
-                    {/* Flowing Gold Trail (Only during flight) */}
+                    {/* Golden Trail (Exhaust) - Always on the left now as plane flies right */}
                     {isFlying && (
-                        <div className={`absolute top-1/2 -mt-0.5 h-1 bg-gradient-to-r from-transparent via-[#C5A059] to-transparent blur-[1px] rounded-full animate-pulse
-                           ${isReturn 
-                             ? 'left-full w-28 origin-left' 
-                             : 'right-full w-28 origin-right'
-                           }
-                        `}></div>
+                        <div className="absolute top-1/2 -mt-0.5 right-full w-16 h-1 bg-gradient-to-r from-transparent via-[#C5A059] to-transparent blur-[1px] rounded-full opacity-60 origin-right"></div>
                     )}
                  </div>
              </div>

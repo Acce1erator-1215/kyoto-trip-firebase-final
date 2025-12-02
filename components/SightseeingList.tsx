@@ -4,6 +4,7 @@ import { SightseeingSpot } from '../types';
 import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { resizeImage } from '../services/imageUtils';
 
 interface Props {
   items: SightseeingSpot[];
@@ -80,14 +81,16 @@ export const SightseeingList: React.FC<Props> = ({ items }) => {
     await deleteDoc(doc(db, 'sightseeing', id));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setForm({ ...form, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const resizedImage = await resizeImage(file);
+        setForm({ ...form, imageUrl: resizedImage });
+      } catch (error) {
+        console.error("Image upload failed", error);
+        alert("圖片處理失敗，請重試");
+      }
     }
   };
 
@@ -209,7 +212,7 @@ export const SightseeingList: React.FC<Props> = ({ items }) => {
                                 <span className="text-[10px] mt-1 font-bold">景點照片</span>
                             </div>
                         )}
-                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" hidden />
+                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*,image/heic,image/heif" hidden />
                     </div>
 
                     <div className="space-y-4">

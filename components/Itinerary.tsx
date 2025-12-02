@@ -4,6 +4,7 @@ import { ItineraryItem, Category, CATEGORIES, DATES } from '../types';
 import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { resizeImage } from '../services/imageUtils';
 
 interface ItineraryProps {
   dayIndex: number;
@@ -108,14 +109,16 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
     })();
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setItemForm({ ...itemForm, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const resizedImage = await resizeImage(file);
+        setItemForm({ ...itemForm, imageUrl: resizedImage });
+      } catch (error) {
+        console.error("Image upload failed", error);
+        alert("圖片處理失敗，請重試");
+      }
     }
   };
 
@@ -339,7 +342,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                            type="file" 
                            ref={fileInputRef} 
                            onChange={handleImageUpload} 
-                           accept="image/*" 
+                           accept="image/*,image/heic,image/heif" 
                            hidden 
                        />
                     </div>

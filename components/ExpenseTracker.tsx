@@ -425,14 +425,24 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
                                 {currency}
                                 </button>
                             </div>
-                            <div className="w-24 relative flex items-center">
-                                <span className="absolute left-3 text-stone-400 text-xs font-bold">x</span>
-                                <input 
-                                type="number"
-                                value={quantityInput}
-                                onChange={(e) => setQuantityInput(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-full p-3 pl-6 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:border-wafu-indigo font-mono text-lg text-center"
-                                />
+                            
+                            {/* Improved Horizontal Stepper for Quantity */}
+                            <div className="flex items-center bg-stone-50 rounded-xl border border-stone-200 overflow-hidden shrink-0">
+                                <button 
+                                  onClick={() => setQuantityInput(Math.max(1, quantityInput - 1))}
+                                  className="px-3 py-3 text-stone-400 hover:bg-stone-100 hover:text-wafu-indigo active:bg-stone-200 transition-colors font-bold text-xl h-full w-12 flex items-center justify-center"
+                                >
+                                  -
+                                </button>
+                                <div className="w-10 text-center font-mono font-bold text-lg text-wafu-indigo border-x border-stone-100 h-full flex items-center justify-center bg-white">
+                                  {quantityInput}
+                                </div>
+                                <button 
+                                  onClick={() => setQuantityInput(quantityInput + 1)}
+                                  className="px-3 py-3 text-stone-400 hover:bg-stone-100 hover:text-wafu-indigo active:bg-stone-200 transition-colors font-bold text-xl h-full w-12 flex items-center justify-center"
+                                >
+                                  +
+                                </button>
                             </div>
                         </div>
 

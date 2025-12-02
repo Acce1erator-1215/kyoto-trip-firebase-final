@@ -4,6 +4,7 @@ import { ShoppingItem, Expense } from '../types';
 import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
+import { resizeImage } from '../services/imageUtils';
 
 interface Props {
   items: ShoppingItem[];
@@ -177,14 +178,16 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewItem({ ...newItem, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const resizedImage = await resizeImage(file);
+        setNewItem({ ...newItem, imageUrl: resizedImage });
+      } catch (error) {
+        console.error("Image processing failed", error);
+        alert("圖片處理失敗，請重試");
+      }
     }
   };
 
