@@ -11,6 +11,8 @@ export interface ItineraryItem {
   completed?: boolean;
   imageUrl?: string; 
   mapsUrl?: string;
+  lat?: number; // Added latitude
+  lng?: number; // Added longitude
   deleted?: boolean; // Soft delete
 }
 
@@ -46,6 +48,8 @@ export interface Restaurant {
   rating: number; // 1-5
   imageUrl?: string;
   mapsUrl?: string;
+  lat?: number; // Added latitude
+  lng?: number; // Added longitude
   tags?: string[]; // Added tags
   deleted?: boolean; // Soft delete
 }
@@ -56,6 +60,8 @@ export interface SightseeingSpot {
   description: string;
   imageUrl?: string;
   mapsUrl?: string;
+  lat?: number; // Added latitude
+  lng?: number; // Added longitude
   deleted?: boolean; // Soft delete
 }
 

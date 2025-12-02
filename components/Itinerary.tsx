@@ -1,19 +1,23 @@
+
 import React, { useState, useRef } from 'react';
 import { ItineraryItem, Category, CATEGORIES, DATES } from '../types';
 import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { resizeImage } from '../services/imageUtils';
+import { calculateDistance, formatDistance, parseCoordinatesFromUrl } from '../services/geoUtils';
 
 interface ItineraryProps {
   dayIndex: number;
   items: ItineraryItem[];
   deletedItems?: ItineraryItem[];
-  setItems: any; // Legacy prop type, unused now as we write to DB
+  setItems: any; // Legacy prop type
   isTodo?: boolean;
+  userLocation?: { lat: number, lng: number } | null;
+  onFocus?: (lat: number, lng: number) => void;
 }
 
-export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedItems = [], isTodo }) => {
+export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedItems = [], isTodo, userLocation, onFocus }) => {
   const [modalMode, setModalMode] = useState<'closed' | 'add' | 'edit'>('closed');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
@@ -24,6 +28,8 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
     notes: '',
     imageUrl: '',
     mapsUrl: '',
+    lat: undefined,
+    lng: undefined
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +73,8 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
         notes: '',
         imageUrl: '',
         mapsUrl: '',
+        lat: undefined,
+        lng: undefined
     });
     setModalMode('add');
   };
@@ -74,15 +82,26 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   const handleSubmit = () => {
     if (!itemForm.location) return;
     
-    // OPTIMISTIC UI: Close modal immediately
     setModalMode('closed');
-    setIsSubmitting(true); // Internal state, though UI is already closed
+    setIsSubmitting(true);
 
-    // Run Firebase in background
+    let lat = itemForm.lat;
+    let lng = itemForm.lng;
+    if (itemForm.mapsUrl && (!lat || !lng)) {
+        const coords = parseCoordinatesFromUrl(itemForm.mapsUrl);
+        if (coords) {
+            lat = coords.lat;
+            lng = coords.lng;
+        }
+    }
+
+    const finalData = { ...itemForm, lat, lng };
+
     (async () => {
       try {
         if (modalMode === 'edit' && itemForm.id) {
-            await updateDoc(doc(db, 'itinerary', itemForm.id), { ...itemForm });
+            const cleanData = JSON.parse(JSON.stringify(finalData));
+            await updateDoc(doc(db, 'itinerary', itemForm.id), cleanData);
         } else {
             const newItemId = Date.now().toString();
             const item: ItineraryItem = {
@@ -95,13 +114,15 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                 completed: false,
                 imageUrl: itemForm.imageUrl || '',
                 mapsUrl: itemForm.mapsUrl || '',
+                lat,
+                lng,
                 deleted: false
             };
-            await setDoc(doc(db, 'itinerary', newItemId), item);
+            const cleanItem = JSON.parse(JSON.stringify(item));
+            await setDoc(doc(db, 'itinerary', newItemId), cleanItem);
         }
       } catch (err) {
         console.error("Error saving itinerary:", err);
-        alert("儲存失敗，請檢查網路或是 Firebase 設定");
       } finally {
         setIsSubmitting(false);
       }
@@ -135,7 +156,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
 
   return (
     <div className="pb-40"> 
-      {/* Header Info */}
       <div className="mb-6 px-6">
         <div className="flex justify-between items-start border-b border-wafu-indigo/10 pb-4">
           <div>
@@ -151,7 +171,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
           </div>
           
           {!isTodo && (
-            // Lifted the date higher with mt-[-0.5rem] to avoid overlapping list items below
             <div className="writing-vertical text-right h-20 text-xs font-serif font-bold text-wafu-gold tracking-widest border-l border-wafu-indigo/20 pl-3 mt-[-0.5rem] z-0">
               {dayDate.replace(/-/g, '.')}
             </div>
@@ -159,18 +178,26 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
         </div>
       </div>
 
-      {/* List */}
       <div className="space-y-6 px-3 sm:px-5 relative z-10">
         {!isTodo && items.length > 0 && (
            <div className="absolute left-[3.5rem] top-4 bottom-8 w-0.5 bg-gradient-to-b from-wafu-gold via-wafu-goldLight to-transparent z-0 opacity-50"></div>
         )}
 
-        {items.map((item, index) => (
+        {items.map((item, index) => {
+          const distanceStr = (userLocation && item.lat && item.lng && item.mapsUrl) 
+            ? formatDistance(calculateDistance(userLocation.lat, userLocation.lng, item.lat, item.lng))
+            : null;
+          
+          const hasMap = item.lat && item.lng && item.mapsUrl;
+
+          return (
           <div
             key={item.id}
+            onClick={() => hasMap && onFocus && onFocus(item.lat!, item.lng!)}
             className={`
               relative group flex items-start gap-3 sm:gap-4 z-10 transition-all duration-300 animate-zoom-in
               ${item.completed ? 'opacity-60 grayscale' : ''}
+              ${hasMap ? 'cursor-pointer hover:scale-[1.01]' : ''}
             `}
           >
              {!isTodo && (
@@ -183,7 +210,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
              {isTodo && (
                 <div className="w-10 shrink-0 flex items-center justify-center pt-5">
                   <button 
-                    onClick={() => toggleComplete(item.id, !!item.completed)}
+                    onClick={(e) => { e.stopPropagation(); toggleComplete(item.id, !!item.completed); }}
                     className={`w-6 h-6 rounded flex items-center justify-center transition-all duration-200 active-bounce
                       ${item.completed 
                         ? 'bg-wafu-gold text-white shadow-sm animate-pop' 
@@ -210,10 +237,15 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
 
                <div className="relative z-10">
                  <div className="flex items-center justify-between mb-2">
-                   <div className="flex gap-2">
+                   <div className="flex gap-2 items-center">
                       <span className={`text-[10px] px-2 py-0.5 border font-bold tracking-widest uppercase font-serif rounded-md ${CATEGORIES[item.category].color}`}>
                         {CATEGORIES[item.category].label}
                       </span>
+                      {distanceStr && (
+                          <span className="text-[10px] bg-wafu-indigo/10 text-wafu-indigo px-1.5 py-0.5 rounded font-bold font-mono">
+                            {distanceStr}
+                          </span>
+                      )}
                    </div>
                  </div>
                  
@@ -223,7 +255,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                     </h3>
                     <div className="flex gap-1">
                         {item.mapsUrl && (
-                        <a href={item.mapsUrl} target="_blank" rel="noreferrer" className="text-wafu-indigo hover:text-wafu-gold transition-colors p-1 active-bounce">
+                        <a href={item.mapsUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-wafu-indigo hover:text-wafu-gold transition-colors p-1 active-bounce">
                             <Icons.MapLink />
                         </a>
                         )}
@@ -250,7 +282,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                </div>
             </div>
           </div>
-        ))}
+        )})}
 
         {deletedItems.length > 0 && (
           <div className="mt-8 px-2">
@@ -268,18 +300,8 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                     <div key={item.id} className="flex justify-between items-center opacity-60 hover:opacity-100 transition-opacity gap-2">
                        <span className="text-sm text-stone-500 font-serif truncate flex-1">{item.location}</span>
                        <div className="flex gap-1 shrink-0">
-                           <button 
-                             onClick={() => handleRestore(item.id)}
-                             className="text-xs bg-stone-200 hover:bg-wafu-indigo hover:text-white px-2 py-1 rounded-md transition-colors font-bold active-bounce"
-                           >
-                             復原
-                           </button>
-                           <button 
-                             onClick={() => handlePermanentDelete(item.id)}
-                             className="text-xs bg-stone-100 text-stone-400 hover:bg-red-50 hover:text-red-500 px-2 py-1 rounded-md transition-colors font-bold active-bounce"
-                           >
-                             永久刪除
-                           </button>
+                           <button onClick={() => handleRestore(item.id)} className="text-xs bg-stone-200 hover:bg-wafu-indigo hover:text-white px-2 py-1 rounded-md transition-colors font-bold active-bounce">復原</button>
+                           <button onClick={() => handlePermanentDelete(item.id)} className="text-xs bg-stone-100 text-stone-400 hover:bg-red-50 hover:text-red-500 px-2 py-1 rounded-md transition-colors font-bold active-bounce">永久刪除</button>
                        </div>
                     </div>
                   ))}
@@ -289,83 +311,43 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
         )}
       </div>
 
-      {/* Add Button */}
       <div className="mt-12 px-6">
         {modalMode === 'closed' ? (
-          <button 
-            onClick={handleOpenAdd}
-            className="w-full py-4 border border-dashed border-wafu-indigo/20 rounded-2xl text-wafu-indigo/60 flex items-center justify-center gap-2 hover:bg-white hover:border-wafu-indigo/50 hover:text-wafu-indigo transition-all duration-100 active-bounce font-bold tracking-widest bg-white/40 font-serif"
-          >
+          <button onClick={handleOpenAdd} className="w-full py-4 border border-dashed border-wafu-indigo/20 rounded-2xl text-wafu-indigo/60 flex items-center justify-center gap-2 hover:bg-white hover:border-wafu-indigo/50 hover:text-wafu-indigo transition-all duration-100 active-bounce font-bold tracking-widest bg-white/40 font-serif">
             <Icons.Plus />
             {isTodo ? "新增待辦" : "追加行程"}
           </button>
         ) : (
           <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-wafu-indigo/60 backdrop-blur-sm p-0 sm:p-4 animate-fade-in">
             <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-wafu-border animate-modal-slide-up flex flex-col max-h-[85dvh] overflow-hidden">
-               {/* Header - Solid Blue for Visibility */}
                <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-3xl shadow-md z-20">
-                  <button 
-                    onClick={() => setModalMode('closed')}
-                    className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2"
-                  >
-                    取消
-                  </button>
-                  <div className="font-bold text-white font-serif text-lg tracking-widest">
-                    {modalMode === 'add' ? (isTodo ? '待辦事項' : '行程追加') : '編輯行程'}
-                  </div>
-                  <button 
-                    onClick={handleSubmit}
-                    disabled={!itemForm.location}
-                    className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2"
-                  >
-                    儲存
-                  </button>
+                  <button onClick={() => setModalMode('closed')} className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2">取消</button>
+                  <div className="font-bold text-white font-serif text-lg tracking-widest">{modalMode === 'add' ? (isTodo ? '待辦事項' : '行程追加') : '編輯行程'}</div>
+                  <button onClick={handleSubmit} disabled={!itemForm.location} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">儲存</button>
                </div>
 
                <div className="flex-1 overflow-y-auto px-6 py-6 pb-32 relative bg-white">
                   <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
-                  
                   <div className="relative z-10">
-                    <div 
-                       onClick={() => fileInputRef.current?.click()}
-                       className="w-full h-32 mb-4 rounded-xl bg-stone-50 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative group active-bounce transition-transform"
-                    >
+                    <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 mb-4 rounded-xl bg-stone-50 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative group active-bounce transition-transform">
                        {itemForm.imageUrl ? (
                            <img src={itemForm.imageUrl} alt="preview" className="w-full h-full object-cover" />
                        ) : (
-                           <div className="flex flex-col items-center text-stone-400">
-                               <Icons.Plus />
-                               <span className="text-[10px] mt-1 font-bold">上傳照片</span>
-                           </div>
+                           <div className="flex flex-col items-center text-stone-400"><Icons.Plus /><span className="text-[10px] mt-1 font-bold">上傳照片</span></div>
                        )}
-                       <input 
-                           type="file" 
-                           ref={fileInputRef} 
-                           onChange={handleImageUpload} 
-                           accept="image/*,image/heic,image/heif" 
-                           hidden 
-                       />
+                       <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*,image/heic,image/heif" hidden />
                     </div>
 
                     <div className="grid grid-cols-3 gap-4 mb-4">
                       {!isTodo && (
                         <div className="col-span-1">
                            <label className="text-[10px] text-stone-400 font-bold block mb-1.5 uppercase">時間</label>
-                           <input 
-                             type="time" 
-                             value={itemForm.time}
-                             onChange={e => setItemForm({...itemForm, time: e.target.value})}
-                             className="w-full p-2 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm font-serif"
-                           />
+                           <input type="time" value={itemForm.time} onChange={e => setItemForm({...itemForm, time: e.target.value})} className="w-full p-2 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm font-serif" />
                         </div>
                       )}
-                       <div className={isTodo ? "col-span-3" : "col-span-2"}>
+                       <div className="col-span-2">
                          <label className="text-[10px] text-stone-400 font-bold block mb-1.5 uppercase">分類</label>
-                         <select 
-                           value={itemForm.category}
-                           onChange={e => setItemForm({...itemForm, category: e.target.value as Category})}
-                           className="w-full p-2 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm appearance-none font-sans"
-                         >
+                         <select value={itemForm.category} onChange={e => setItemForm({...itemForm, category: e.target.value as Category})} className="w-full p-2 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm appearance-none font-sans">
                            {Object.entries(CATEGORIES).map(([key, val]) => (
                              <option key={key} value={key}>{val.icon} {val.label}</option>
                            ))}
@@ -374,33 +356,15 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                     </div>
                     
                     <div className="mb-4 space-y-3">
-                       <input 
-                         type="text" 
-                         placeholder={isTodo ? "事項名稱..." : "地點名稱..."}
-                         value={itemForm.location}
-                         onChange={e => setItemForm({...itemForm, location: e.target.value})}
-                         className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo font-bold text-base placeholder:font-normal placeholder:text-stone-300 font-serif"
-                       />
+                       <input type="text" placeholder={isTodo ? "事項名稱..." : "地點名稱..."} value={itemForm.location} onChange={e => setItemForm({...itemForm, location: e.target.value})} className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo font-bold text-base placeholder:font-normal placeholder:text-stone-300 font-serif" />
                        {!isTodo && (
                          <div className="relative">
-                            <input 
-                              type="text" 
-                              placeholder="Google Map 連結..."
-                              value={itemForm.mapsUrl}
-                              onChange={e => setItemForm({...itemForm, mapsUrl: e.target.value})}
-                              className="w-full p-2 pl-8 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-xs text-stone-600"
-                            />
+                            <input type="text" placeholder="Google Map 連結..." value={itemForm.mapsUrl} onChange={e => setItemForm({...itemForm, mapsUrl: e.target.value})} className="w-full p-2 pl-8 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-xs text-stone-600" />
                             <div className="absolute left-2 top-2.5 text-stone-400"><Icons.MapLink /></div>
                          </div>
                        )}
                     </div>
-                    
-                    <textarea 
-                      placeholder="備註..."
-                      value={itemForm.notes}
-                      onChange={e => setItemForm({...itemForm, notes: e.target.value})}
-                      className="w-full p-3 mb-2 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo h-20 resize-none text-sm"
-                    />
+                    <textarea placeholder="備註..." value={itemForm.notes} onChange={e => setItemForm({...itemForm, notes: e.target.value})} className="w-full p-3 mb-2 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo h-20 resize-none text-sm" />
                   </div>
                </div>
             </div>

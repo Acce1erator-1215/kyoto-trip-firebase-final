@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, MouseEvent, useEffect } from 'react';
 import { ItineraryItem, Expense, ShoppingItem, Restaurant, SightseeingSpot, DATES } from './types';
 import { Itinerary } from './components/Itinerary';
@@ -8,6 +9,7 @@ import { ExpenseTracker } from './components/ExpenseTracker';
 import { Icons } from './components/Icon';
 import { INITIAL_ITINERARY } from './services/mockData';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { MapComponent } from './components/MapComponent';
 
 // Firebase Imports
 import { db } from './firebase';
@@ -43,7 +45,7 @@ const FlightPass = ({
   const handleFlightClick = () => {
     if(isFlying) return;
     setIsFlying(true);
-    setTimeout(() => setIsFlying(false), 3000); // Extended to 8 seconds
+    setTimeout(() => setIsFlying(false), 8000); // 8 seconds duration
   };
 
   return (
@@ -291,8 +293,11 @@ const DateSelector = ({
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('itinerary');
   const [selectedDay, setSelectedDay] = useState<number>(1); // 0=Todo, 1..8
+  const [showMap, setShowMap] = useState<boolean>(true);
   const [dbError, setDbError] = useState(false);
   const [currentRate, setCurrentRate] = useState<number>(0.22); // Default
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [focusedLocation, setFocusedLocation] = useState<{lat: number, lng: number} | null>(null);
   
   // -- Cloud Data States --
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([]);
@@ -303,6 +308,29 @@ export default function App() {
 
   // Guard to prevent multiple seeded writes in a single session
   const seedAttempted = useRef(false);
+
+  // -- Geolocation --
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    const success = (pos: GeolocationPosition) => {
+        setUserLocation({ 
+            lat: pos.coords.latitude, 
+            lng: pos.coords.longitude 
+        });
+    };
+    
+    const error = (err: any) => console.warn("Geolocation denied or error:", err);
+    
+    // Using watchPosition for real-time tracking
+    const watchId = navigator.geolocation.watchPosition(success, error, {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 1000
+    });
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   // -- Live Exchange Rate Fetcher --
   useEffect(() => {
@@ -332,11 +360,9 @@ export default function App() {
         }
     };
 
-    // 1. Itinerary
     const unsubItinerary = onSnapshot(query(collection(db, 'itinerary')), async (snapshot) => {
       if (snapshot.empty && !seedAttempted.current) {
          seedAttempted.current = true;
-         // Auto-seed data for testing purposes as requested
          console.log("Empty itinerary detected. Seeding initial data...");
          const batch = writeBatch(db);
          INITIAL_ITINERARY.forEach(item => {
@@ -356,31 +382,26 @@ export default function App() {
       }
     }, handleSnapshotError);
 
-    // 2. Expenses
     const unsubExpenses = onSnapshot(query(collection(db, 'expenses')), (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
       setExpenses(items);
     }, handleSnapshotError);
 
-    // 3. Shopping
     const unsubShopping = onSnapshot(query(collection(db, 'shopping')), (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShoppingItem));
       setShoppingItems(items);
     }, handleSnapshotError);
 
-    // 4. Restaurants
     const unsubRestaurants = onSnapshot(query(collection(db, 'restaurants')), (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Restaurant));
       setRestaurants(items);
     }, handleSnapshotError);
 
-    // 5. Sightseeing
     const unsubSightseeing = onSnapshot(query(collection(db, 'sightseeing')), (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SightseeingSpot));
       setSightseeingSpots(items);
     }, handleSnapshotError);
 
-    // Cleanup on unmount
     return () => {
       unsubItinerary();
       unsubExpenses();
@@ -413,47 +434,43 @@ export default function App() {
      setIsSpinning(true);
      setTimeout(() => setIsSpinning(false), 2500); 
 
-     // Create random petals with physics properties
      const newPetals: Petal[] = Array.from({ length: 30 }).map((_, i) => ({
          id: Date.now() + i,
          left: `${Math.random() * 100}%`,
-         duration: `${Math.random() * 5 + 6}s`, // Slower fall (6-11s)
+         duration: `${Math.random() * 5 + 6}s`, 
          delay: `${Math.random() * 3}s`,
          size: Math.random() * 14 + 10,
          color: Math.random() > 0.6 ? 'text-pink-300' : 'text-pink-200',
-         swayX: `${(Math.random() - 0.5) * 200}px`, // Sway distance
-         depthBlur: Math.random() > 0.7 ? 'blur-[1px]' : 'blur-[0px]' // Simulate Depth of Field
+         swayX: `${(Math.random() - 0.5) * 200}px`,
+         depthBlur: Math.random() > 0.7 ? 'blur-[1px]' : 'blur-[0px]'
      }));
      
      setSakuraPetals(prev => [...prev, ...newPetals]);
-     
-     // Cleanup after animation
      setTimeout(() => {
         setSakuraPetals(prev => prev.filter(p => !newPetals.includes(p)));
      }, 14000);
   };
 
+  // Handle Focus on Item: Scroll to top and zoom map
+  const handleFocus = (lat: number, lng: number) => {
+      if (!showMap) setShowMap(true);
+      setFocusedLocation({ lat, lng });
+      if (mainContentDrag.ref.current) {
+          mainContentDrag.ref.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+  };
+
   return (
     <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base ring-1 ring-black/5">
       <SpeedInsights />
-      {/* Database Error Overlay */}
       {dbError && (
         <div className="fixed inset-0 z-[10000] bg-black/80 flex flex-col items-center justify-center text-white p-8 text-center backdrop-blur-md">
             <div className="text-4xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold mb-2">資料庫存取被拒</h2>
-            <p className="text-sm opacity-80 mb-6">
-                請確認 Firebase Console 的 Firestore Rules 是否已設為測試模式 (allow read, write: if true;)。
-            </p>
-            <button 
-                onClick={() => window.location.reload()}
-                className="bg-white text-black px-6 py-2 rounded-full font-bold active:scale-95 transition-transform"
-            >
-                重新整理
-            </button>
+            <button onClick={() => window.location.reload()} className="bg-white text-black px-6 py-2 rounded-full font-bold active:scale-95 transition-transform">重新整理</button>
         </div>
       )}
 
-      {/* Falling Sakura Petals Overlay with Physics */}
       {sakuraPetals.map(petal => (
         <div
           key={petal.id}
@@ -464,62 +481,61 @@ export default function App() {
             height: petal.size,
             animationDuration: petal.duration,
             animationDelay: petal.delay,
-            '--sway-x': petal.swayX, // Pass sway to CSS variable
+            '--sway-x': petal.swayX, 
           } as React.CSSProperties}
         >
           <Icons.SakuraPetal />
         </div>
       ))}
 
-      {/* Header - Luxury Sakura - REDUCED HEIGHT BUT LARGER FONT */}
       <div className="relative z-30 pt-10 pb-3 px-5 flex justify-between items-center bg-wafu-bg/85 backdrop-blur-xl border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.02)] shrink-0 transition-all duration-300">
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-wafu-gold/20 via-wafu-gold to-wafu-gold/20"></div>
 
         <div className="flex items-center gap-4 cursor-pointer active-bounce group" onClick={triggerSakura}>
-           {/* Sakura Crest - Larger Size */}
            <div className={`w-12 h-12 relative shrink-0 text-wafu-indigo filter drop-shadow-sm group-hover:drop-shadow-md transition-all ${isSpinning ? 'animate-jump-spin' : ''}`}>
               <Icons.Sakura />
            </div>
            <div>
-             {/* Title - Tweaked to text-2xl as requested */}
-             <h1 className="text-2xl font-serif font-black text-wafu-indigo tracking-[0.2em] leading-none text-gold-leaf mb-1 drop-shadow-sm">
-               京都八日遊
-             </h1>
+             <h1 className="text-2xl font-serif font-black text-wafu-indigo tracking-[0.2em] leading-none text-gold-leaf mb-1 drop-shadow-sm">京都八日遊</h1>
              <p className="text-[14px] text-wafu-gold font-bold tracking-[0.4em] uppercase opacity-90 pl-0.5 font-serif">Kyoto Journey</p>
            </div>
         </div>
-        <a 
-          href="https://www.vjw.digital.go.jp/" 
-          target="_blank" 
-          rel="noreferrer"
-          className="group relative flex flex-col items-center justify-center w-9 h-9 bg-wafu-indigo text-white rounded-xl shadow-lg hover:shadow-xl hover:bg-wafu-darkIndigo transition-all duration-300 active-bounce overflow-hidden ring-1 ring-white/20"
-        >
+        <a href="https://www.vjw.digital.go.jp/" target="_blank" rel="noreferrer" className="group relative flex flex-col items-center justify-center w-9 h-9 bg-wafu-indigo text-white rounded-xl shadow-lg hover:shadow-xl hover:bg-wafu-darkIndigo transition-all duration-300 active-bounce overflow-hidden ring-1 ring-white/20">
           <div className="scale-90 opacity-90 group-hover:opacity-100 transition-opacity"><Icons.QrCode /></div>
           <div className="absolute bottom-1 right-1 w-1 h-1 bg-gold-leaf rounded-full shadow-[0_0_5px_rgba(255,255,255,0.8)]"></div>
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </a>
       </div>
 
-      {/* Content Area - Vertically Draggable */}
-      <div 
-        ref={mainContentDrag.ref}
-        {...mainContentDrag.events}
-        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper ${mainContentDrag.className}`}
-      >
+      <div ref={mainContentDrag.ref} {...mainContentDrag.events} className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper ${mainContentDrag.className}`}>
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
           {activeTab === 'itinerary' && (
             <>
               <DateSelector selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
+              
+              <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative">
+                  <button onClick={() => setShowMap(!showMap)} className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border ${showMap ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' : 'bg-white text-stone-400 border-stone-200 hover:border-wafu-indigo/30'}`}>
+                    <Icons.MapPin className="w-3 h-3" strokeWidth={2.5} />
+                    <span>{showMap ? "隱藏地圖" : "顯示地圖"}</span>
+                  </button>
+              </div>
+
+              {showMap && (
+                <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                   <MapComponent items={currentDayItems} userLocation={userLocation} focusedLocation={focusedLocation} />
+                </div>
+              )}
+              
               <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-fixed bg-top">
-                {/* Wrap Itinerary in a key'd div to trigger animation on day switch */}
                 <div key={selectedDay} className="animate-fade-in-up-gentle">
                     <Itinerary 
                         dayIndex={selectedDay} 
                         items={currentDayItems} 
                         deletedItems={currentDayDeletedItems}
-                        // setItems is not passed as state setter, logic is inside Itinerary
                         setItems={() => {}} 
                         isTodo={selectedDay === 0}
+                        userLocation={userLocation}
+                        onFocus={handleFocus}
                     />
                 </div>
               </div>
@@ -527,15 +543,45 @@ export default function App() {
           )}
 
           {activeTab === 'sightseeing' && (
-            <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <SightseeingList items={sightseeingSpots} setItems={() => {}} />
-            </div>
+            <>
+                {/* Map Toggle for Sightseeing */}
+                <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative">
+                    <button onClick={() => setShowMap(!showMap)} className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border ${showMap ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' : 'bg-white text-stone-400 border-stone-200 hover:border-wafu-indigo/30'}`}>
+                        <Icons.MapPin className="w-3 h-3" strokeWidth={2.5} />
+                        <span>{showMap ? "隱藏地圖" : "顯示地圖"}</span>
+                    </button>
+                </div>
+
+                {showMap && (
+                    <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                        <MapComponent items={sightseeingSpots} userLocation={userLocation} focusedLocation={focusedLocation} />
+                    </div>
+                )}
+                <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
+                    <SightseeingList items={sightseeingSpots} setItems={() => {}} userLocation={userLocation} onFocus={handleFocus} />
+                </div>
+            </>
           )}
 
           {activeTab === 'food' && (
-            <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <FoodList items={restaurants} setItems={() => {}} />
-            </div>
+             <>
+                {/* Map Toggle for Food */}
+                <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative">
+                    <button onClick={() => setShowMap(!showMap)} className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border ${showMap ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' : 'bg-white text-stone-400 border-stone-200 hover:border-wafu-indigo/30'}`}>
+                        <Icons.MapPin className="w-3 h-3" strokeWidth={2.5} />
+                        <span>{showMap ? "隱藏地圖" : "顯示地圖"}</span>
+                    </button>
+                </div>
+
+                {showMap && (
+                    <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                        <MapComponent items={restaurants} userLocation={userLocation} focusedLocation={focusedLocation} />
+                    </div>
+                )}
+                <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
+                    <FoodList items={restaurants} setItems={() => {}} userLocation={userLocation} onFocus={handleFocus} />
+                </div>
+             </>
           )}
 
           {activeTab === 'money' && (
@@ -564,82 +610,42 @@ export default function App() {
                     <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
                     <span className="tracking-widest">去程 (Outbound)</span>
                 </h3>
-                <FlightPass 
-                  originCode="TPE" originCity="Taipei" 
-                  destCode="UKB" destCity="Kobe"
-                  flightNum="JX 834"
-                  date="01/17 (Sat)"
-                  time="07:00 - 10:30"
-                  seat="12A, 12B"
-                />
+                <FlightPass originCode="TPE" originCity="Taipei" destCode="UKB" destCity="Kobe" flightNum="JX 834" date="01/17 (Sat)" time="07:00 - 10:30" seat="12A, 12B" />
 
                 <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
                     <div className="w-1.5 h-1.5 rounded-full bg-wafu-indigo shadow-[0_0_8px_rgba(24,54,84,0.6)]"></div>
                     <span className="tracking-widest">回程 (Inbound)</span>
                 </h3>
-                <FlightPass 
-                  originCode="KIX" originCity="Osaka" 
-                  destCode="TPE" destCity="Taipei"
-                  flightNum="JX 823"
-                  date="01/24 (Sat)"
-                  time="14:00 - 16:15"
-                  seat="12A, 12B"
-                  isReturn={true}
-                />
+                <FlightPass originCode="KIX" originCity="Osaka" destCode="TPE" destCity="Taipei" flightNum="JX 823" date="01/24 (Sat)" time="14:00 - 16:15" seat="12A, 12B" isReturn={true} />
              </div>
           )}
         </div>
       </div>
 
-      {/* Bottom Navigation with iOS Safe Area Padding - GLASS EFFECT */}
       <div className="bg-wafu-paper/85 backdrop-blur-xl border-t border-white/50 grid grid-cols-6 px-1 pt-2 z-50 shrink-0 shadow-[0_-5px_25px_rgba(24,54,84,0.05)] relative pb-[env(safe-area-inset-bottom)]">
-        {/* Subtle highlight line at top */}
         <div className="absolute top-0 left-0 w-full h-px bg-white/60"></div>
 
-        <button 
-          onClick={() => setActiveTab('itinerary')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
-        >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'itinerary' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
-             <Icons.Calendar strokeWidth={2.5} />
-          </div>
+        <button onClick={() => setActiveTab('itinerary')} className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'itinerary' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}><Icons.Calendar strokeWidth={2.5} /></div>
           <span className={`text-[10px] font-black tracking-widest transition-all ${activeTab === 'itinerary' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>行程</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('sightseeing')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'sightseeing' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
-        >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'sightseeing' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
-             <Icons.MapPin strokeWidth={2.5} />
-          </div>
+        <button onClick={() => setActiveTab('sightseeing')} className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'sightseeing' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'sightseeing' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}><Icons.MapPin strokeWidth={2.5} /></div>
           <span className={`text-[10px] font-black tracking-widest transition-all ${activeTab === 'sightseeing' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>景點</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('food')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'food' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
-        >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'food' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
-             <Icons.Utensils strokeWidth={2.5} />
-          </div>
+        <button onClick={() => setActiveTab('food')} className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'food' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'food' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}><Icons.Utensils strokeWidth={2.5} /></div>
           <span className={`text-[10px] font-black tracking-widest transition-all ${activeTab === 'food' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>美食</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('money')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'money' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
-        >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'money' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
-             <Icons.Wallet strokeWidth={2.5} />
-          </div>
+        <button onClick={() => setActiveTab('money')} className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'money' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'money' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}><Icons.Wallet strokeWidth={2.5} /></div>
           <span className={`text-[10px] font-black tracking-widest transition-all ${activeTab === 'money' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>記帳</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('shop')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'shop' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
-        >
+        <button onClick={() => setActiveTab('shop')} className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'shop' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
           <div className={`relative p-1 transition-all duration-500 ease-out ${activeTab === 'shop' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
              <Icons.ShoppingBag strokeWidth={2.5} />
              {shoppingItems.filter(i => !i.bought && !i.deleted).length > 0 && (
@@ -651,13 +657,8 @@ export default function App() {
           <span className={`text-[10px] font-black tracking-widest transition-all ${activeTab === 'shop' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>伴手禮</span>
         </button>
         
-        <button 
-          onClick={() => setActiveTab('flight')}
-          className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'flight' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}
-        >
-          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'flight' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}>
-             <Icons.Ticket strokeWidth={2.5} />
-          </div>
+        <button onClick={() => setActiveTab('flight')} className={`relative z-10 group flex flex-col items-center justify-center gap-1 transition-all duration-300 active-bounce py-2 ${activeTab === 'flight' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
+          <div className={`p-1 transition-all duration-500 ease-out ${activeTab === 'flight' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}><Icons.Ticket strokeWidth={2.5} /></div>
           <span className={`text-[10px] font-black tracking-widest transition-all ${activeTab === 'flight' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>機票</span>
         </button>
       </div>

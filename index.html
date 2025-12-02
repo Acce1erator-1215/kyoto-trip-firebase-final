@@ -7,6 +7,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Kyoto Journey 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS & JS (Free Maps) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       /* iOS Optimization */
@@ -41,7 +45,7 @@
         pointer-events: none;
         z-index: 9999;
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-        opacity: 0.6;
+        opacity: 0.7;
         mix-blend-mode: overlay;
       }
 
@@ -209,29 +213,29 @@
         animation: plane-cruise 4s ease-in-out infinite;
       }
 
-      /* Wind Stream Animation for Speed - MORE VISIBLE BREEZE */
+      /* Wind Stream Animation - FASTER (1.0s) */
       @keyframes wind-stream {
         0% { transform: translateX(100%) scaleX(0.5); opacity: 0; }
         30% { opacity: 0.8; }
         100% { transform: translateX(-150%) scaleX(1.5); opacity: 0; }
       }
       .animate-wind-stream {
-        animation: wind-stream 1.5s linear infinite;
+        animation: wind-stream 1.0s linear infinite; /* Faster from 1.5s */
       }
 
-      /* Floor Scroll Animation for Golden Floor */
+      /* Floor Scroll Animation - FASTER (0.3s) */
       @keyframes floor-scroll {
         0% { background-position: 0 0; }
         100% { background-position: -40px 0; }
       }
       .animate-floor-scroll {
-        animation: floor-scroll 0.5s linear infinite;
+        animation: floor-scroll 0.3s linear infinite; /* Faster from 0.5s */
       }
 
-      /* Shine Sweep Effect - FASTER */
+      /* Shine Sweep Effect - FASTER (0.4s) */
       @keyframes shine-sweep {
         0% { left: -100%; opacity: 0; }
-        20% { opacity: 0.6; }
+        20% { opacity: 0.1; }
         100% { left: 200%; opacity: 0; }
       }
       .animate-shine-sweep {
@@ -241,7 +245,7 @@
         height: 100%;
         background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent);
         transform: skewX(-20deg);
-        animation: shine-sweep 0.6s ease-out forwards; /* Faster duration */
+        animation: shine-sweep 0.4s ease-out forwards; /* Faster from 0.6s */
         pointer-events: none;
         z-index: 50;
         mix-blend-mode: overlay;
@@ -320,6 +324,7 @@
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?external=react",
     "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
     "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/app-check": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js",
     "@vercel/speed-insights/react": "https://esm.sh/@vercel/speed-insights@1.0.10/react?external=react,react-dom",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { ShoppingItem, Expense } from '../types';
 import { Icons } from './Icon';
@@ -17,7 +18,9 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [filterFlavor, setFilterFlavor] = useState<'all' | 'sweet' | 'salty'>('all');
+  
+  // Multi-select state
+  const [activeFlavorFilters, setActiveFlavorFilters] = useState<('sweet' | 'salty')[]>([]);
 
   const [newItem, setNewItem] = useState<Partial<ShoppingItem>>({
     name: '',
@@ -34,10 +37,23 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
   
+  // Filter Logic: If filter array is empty, show all. Else show matches.
   const filteredItems = activeItems.filter(item => {
-      if (filterFlavor === 'all') return true;
-      return item.flavor === filterFlavor;
+      if (activeFlavorFilters.length === 0) return true;
+      return item.flavor && activeFlavorFilters.includes(item.flavor);
   });
+
+  const toggleFlavorFilter = (flavor: 'sweet' | 'salty') => {
+      if (activeFlavorFilters.includes(flavor)) {
+          setActiveFlavorFilters(activeFlavorFilters.filter(f => f !== flavor));
+      } else {
+          setActiveFlavorFilters([...activeFlavorFilters, flavor]);
+      }
+  };
+
+  const clearFlavorFilters = () => {
+      setActiveFlavorFilters([]);
+  };
 
   const openAdd = () => {
     setEditingId(null);
@@ -60,7 +76,9 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     (async () => {
         try {
             if (editingId) {
-                await updateDoc(doc(db, 'shopping', editingId), { ...newItem });
+                // Strip undefined
+                const cleanData = JSON.parse(JSON.stringify(newItem));
+                await updateDoc(doc(db, 'shopping', editingId), cleanData);
                 
                 // If bought, update the linked expense as well
                 if (newItem.bought && newItem.linkedExpenseId) {
@@ -73,7 +91,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                 }
             } else {
                 const newId = Date.now().toString();
-                await setDoc(doc(db, 'shopping', newId), {
+                const itemData = {
                     id: newId,
                     name: newItem.name,
                     description: newItem.description || '',
@@ -83,7 +101,10 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                     quantity: newItem.quantity || 1,
                     flavor: newItem.flavor,
                     deleted: false
-                });
+                };
+                // Strip undefined
+                const cleanItem = JSON.parse(JSON.stringify(itemData));
+                await setDoc(doc(db, 'shopping', newId), cleanItem);
             }
             // Reset form
             setNewItem({ name: '', description: '', priceYen: 0, imageUrl: '', quantity: 1, flavor: undefined });
@@ -197,23 +218,23 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">伴手禮</h2>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Filter Tabs - Updated to Multi-select */}
       <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
           <button 
-            onClick={() => setFilterFlavor('all')}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filterFlavor === 'all' ? 'bg-wafu-indigo text-white border-wafu-indigo' : 'bg-white text-stone-400 border-stone-200'}`}
+            onClick={clearFlavorFilters}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${activeFlavorFilters.length === 0 ? 'bg-wafu-indigo text-white border-wafu-indigo' : 'bg-white text-stone-400 border-stone-200'}`}
           >
             全部 ({activeItems.length})
           </button>
           <button 
-            onClick={() => setFilterFlavor('sweet')}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filterFlavor === 'sweet' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-white text-stone-400 border-stone-200'}`}
+            onClick={() => toggleFlavorFilter('sweet')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${activeFlavorFilters.includes('sweet') ? 'bg-pink-100 text-pink-700 border-pink-200 shadow-sm' : 'bg-white text-stone-400 border-stone-200'}`}
           >
             甜食 🍰
           </button>
           <button 
-            onClick={() => setFilterFlavor('salty')}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filterFlavor === 'salty' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-white text-stone-400 border-stone-200'}`}
+            onClick={() => toggleFlavorFilter('salty')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${activeFlavorFilters.includes('salty') ? 'bg-orange-100 text-orange-700 border-orange-200 shadow-sm' : 'bg-white text-stone-400 border-stone-200'}`}
           >
             鹹食 🍘
           </button>
