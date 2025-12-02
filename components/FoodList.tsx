@@ -39,6 +39,51 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Drag Scroll Logic
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isDown = useRef(false);
+  const startX = useRef(0);
+  const scrollLeftStart = useRef(0);
+  const isDrag = useRef(false);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    isDown.current = true;
+    isDrag.current = false;
+    if (scrollRef.current) {
+      startX.current = e.pageX - scrollRef.current.offsetLeft;
+      scrollLeftStart.current = scrollRef.current.scrollLeft;
+    }
+  };
+  
+  const onMouseLeave = () => {
+    isDown.current = false;
+  };
+  
+  const onMouseUp = () => {
+    isDown.current = false;
+  };
+  
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDown.current || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX.current) * 2;
+    scrollRef.current.scrollLeft = scrollLeftStart.current - walk;
+    if (Math.abs(x - startX.current) > 5) isDrag.current = true;
+  };
+
+  const handleTagClick = (tag: string) => {
+      if (!isDrag.current) {
+          toggleFilter(tag);
+      }
+  };
+
+  const handleClearClick = () => {
+      if (!isDrag.current) {
+          clearFilters();
+      }
+  };
+
   const allUsedTags = Array.from(new Set([
       ...PREDEFINED_TAGS,
       ...items.flatMap(i => i.tags || [])
@@ -174,18 +219,25 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">美食清單</h2>
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
+      <div 
+        ref={scrollRef}
+        onMouseDown={onMouseDown}
+        onMouseLeave={onMouseLeave}
+        onMouseUp={onMouseUp}
+        onMouseMove={onMouseMove}
+        className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1 cursor-grab active:cursor-grabbing touch-pan-x"
+      >
          <button 
-            onClick={clearFilters} 
-            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${activeTagFilters.length === 0 ? 'bg-wafu-indigo text-white border-wafu-indigo' : 'bg-white text-stone-400 border-stone-200'}`}
+            onClick={handleClearClick} 
+            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${activeTagFilters.length === 0 ? 'bg-wafu-indigo text-white border-wafu-indigo' : 'bg-white text-stone-400 border-stone-200'}`}
          >
             全部 ({activeItems.length})
          </button>
          {allUsedTags.map(tag => (
              <button 
                 key={tag} 
-                onClick={() => toggleFilter(tag)} 
-                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${activeTagFilters.includes(tag) ? 'bg-wafu-gold text-white border-wafu-gold shadow-sm' : 'bg-white text-stone-400 border-stone-200'}`}
+                onClick={() => handleTagClick(tag)} 
+                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${activeTagFilters.includes(tag) ? 'bg-wafu-gold text-white border-wafu-gold shadow-sm' : 'bg-white text-stone-400 border-stone-200'}`}
              >
                 {tag}
              </button>
