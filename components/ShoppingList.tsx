@@ -16,12 +16,15 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [filterFlavor, setFilterFlavor] = useState<'all' | 'sweet' | 'salty'>('all');
+
   const [newItem, setNewItem] = useState<Partial<ShoppingItem>>({
     name: '',
     description: '',
     priceYen: 0,
     imageUrl: '',
-    quantity: 1
+    quantity: 1,
+    flavor: undefined
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,10 +32,15 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
 
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
+  
+  const filteredItems = activeItems.filter(item => {
+      if (filterFlavor === 'all') return true;
+      return item.flavor === filterFlavor;
+  });
 
   const openAdd = () => {
     setEditingId(null);
-    setNewItem({ name: '', description: '', priceYen: 0, imageUrl: '', quantity: 1 });
+    setNewItem({ name: '', description: '', priceYen: 0, imageUrl: '', quantity: 1, flavor: undefined });
     setIsAdding(true);
   };
 
@@ -72,11 +80,12 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
                     bought: false,
                     imageUrl: newItem.imageUrl || `https://picsum.photos/300/300?random=${newId}`,
                     quantity: newItem.quantity || 1,
+                    flavor: newItem.flavor,
                     deleted: false
                 });
             }
             // Reset form
-            setNewItem({ name: '', description: '', priceYen: 0, imageUrl: '', quantity: 1 });
+            setNewItem({ name: '', description: '', priceYen: 0, imageUrl: '', quantity: 1, flavor: undefined });
         } catch (err) {
             console.error("Error saving shopping item:", err);
             alert("儲存失敗，請檢查網路連線");
@@ -125,7 +134,8 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
     }
   };
 
-  const handleDelete = async (id: string, item: ShoppingItem) => {
+  const handleDelete = async (id: string, item: ShoppingItem, e: React.MouseEvent) => {
+      e.stopPropagation();
       try {
         // Soft delete shopping item
         await updateDoc(doc(db, 'shopping', id), { deleted: true });
@@ -179,13 +189,35 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
   };
 
   return (
-    <div className="pb-40 px-5">
-      <div className="mb-8 border-b border-wafu-indigo/20 pb-4 mx-1">
+    <div className="pb-40 px-4">
+      <div className="mb-4 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">伴手禮</h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-10">
-        {activeItems.map(item => {
+      {/* Filter Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
+          <button 
+            onClick={() => setFilterFlavor('all')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filterFlavor === 'all' ? 'bg-wafu-indigo text-white border-wafu-indigo' : 'bg-white text-stone-400 border-stone-200'}`}
+          >
+            全部 ({activeItems.length})
+          </button>
+          <button 
+            onClick={() => setFilterFlavor('sweet')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filterFlavor === 'sweet' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-white text-stone-400 border-stone-200'}`}
+          >
+            甜食 🍰
+          </button>
+          <button 
+            onClick={() => setFilterFlavor('salty')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filterFlavor === 'salty' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-white text-stone-400 border-stone-200'}`}
+          >
+            鹹食 🍘
+          </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-10">
+        {filteredItems.map(item => {
            const qty = item.quantity || 1;
            const totalPriceYen = (item.priceYen || 0) * qty;
            const totalPriceTwd = Math.round(totalPriceYen * exchangeRate);
@@ -194,80 +226,73 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
             <div key={item.id} className="bg-white rounded-2xl shadow-washi border border-stone-100 overflow-hidden group flex flex-col relative transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] animate-zoom-in">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none z-10 mix-blend-multiply"></div>
 
-                <div className="h-36 bg-stone-100 relative overflow-hidden cursor-pointer" onClick={() => openEdit(item)}>
+                {/* Reduced Height Image Area */}
+                <div className="h-28 bg-stone-100 relative overflow-hidden cursor-pointer" onClick={() => openEdit(item)}>
                     <img src={item.imageUrl} alt={item.name} className={`w-full h-full object-cover transition-all duration-500 ${item.bought ? 'grayscale opacity-50' : 'group-hover:scale-110'}`} />
                     <button 
                         onClick={(e) => { e.stopPropagation(); toggleBought(item.id, item); }}
-                        className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 z-20 ${item.bought ? 'animate-pop' : ''}
-                        ${item.bought ? 'bg-wafu-gold text-white' : 'bg-white text-stone-300 hover:text-wafu-indigo'}
-                        `}>
-                        <Icons.ShoppingBag />
+                        className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 z-20 ${item.bought ? 'animate-pop' : ''}
+                        ${item.bought ? 'bg-wafu-gold text-white' : 'bg-white text-stone-300'}`}
+                    >
+                        <Icons.Check />
                     </button>
-                    <div className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <div className="bg-white/90 rounded-full p-1.5 shadow-sm text-stone-400">
-                             <Icons.Edit />
-                         </div>
-                    </div>
+                    {item.flavor && (
+                        <div className={`absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold z-20 shadow-sm
+                            ${item.flavor === 'sweet' ? 'bg-pink-100/90 text-pink-700' : 'bg-orange-100/90 text-orange-700'}
+                        `}>
+                            {item.flavor === 'sweet' ? '甜' : '鹹'}
+                        </div>
+                    )}
                 </div>
 
-                <div className="p-4 flex-1 flex flex-col relative z-20">
-                    <h3 className={`font-serif font-bold text-base text-wafu-text truncate leading-snug tracking-wide ${item.bought ? 'line-through decoration-stone-300 text-stone-400' : ''}`}>
-                        {item.name}
-                    </h3>
-                    <p className="text-xs text-stone-500 line-clamp-2 mt-2 flex-1 leading-relaxed opacity-80 font-serif">{item.description}</p>
-                    
-                    <div className="flex items-center justify-between mt-3 bg-stone-50 rounded-lg p-1 border border-stone-100">
-                        <button onClick={() => updateQuantity(item.id, -1, item)} className="w-6 h-6 flex items-center justify-center text-stone-400 hover:text-wafu-indigo font-bold active-bounce">-</button>
-                        <span className="text-xs font-bold text-wafu-indigo font-mono">x{qty}</span>
-                        <button onClick={() => updateQuantity(item.id, 1, item)} className="w-6 h-6 flex items-center justify-center text-stone-400 hover:text-wafu-indigo font-bold active-bounce">+</button>
-                    </div>
-
-                    <div className="mt-3 border-t border-dashed border-stone-100 pt-2">
-                        <div className="flex justify-between items-baseline">
-                            <span className="text-sm font-bold text-wafu-indigo font-mono">¥{totalPriceYen.toLocaleString()}</span>
-                            <span className="text-[10px] text-stone-400 font-mono">≈ NT${totalPriceTwd.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-end mt-2 gap-2">
-                            <button onClick={() => openEdit(item)} className="text-stone-300 hover:text-wafu-indigo transition-all duration-100 active-bounce p-1">
-                                <Icons.Edit />
-                            </button>
-                            <button onClick={() => handleDelete(item.id, item)} className="text-stone-300 hover:text-stone-500 transition-all duration-100 active-bounce p-1">
+                <div className="p-3 flex-1 flex flex-col justify-between relative z-20">
+                    <div>
+                        <div className="flex justify-between items-start mb-1">
+                            <h3 className={`font-serif font-bold text-sm leading-tight line-clamp-2 ${item.bought ? 'text-stone-400 line-through' : 'text-wafu-text'}`}>
+                                {item.name}
+                            </h3>
+                            <button 
+                                onClick={(e) => handleDelete(item.id, item, e)} 
+                                className="text-stone-200 hover:text-stone-400 -mr-1 -mt-1 p-1"
+                            >
                                 <Icons.Trash />
                             </button>
                         </div>
+                        <p className="text-[10px] text-stone-400 line-clamp-1">{item.description}</p>
                     </div>
-                </div>
-                
-                {item.bought && (
-                    <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center bg-white/10 backdrop-blur-[1px]">
-                        <div className="animate-stamp-drop border-2 border-wafu-gold text-wafu-gold rounded font-serif text-lg px-4 py-1 rotate-[-12deg] bg-white/90 shadow-lg tracking-widest uppercase font-bold text-gold-leaf">
-                            購入済
+                    
+                    <div className="mt-3 flex items-end justify-between">
+                        <div className="flex flex-col">
+                            <div className="text-[10px] text-stone-400 font-mono">¥{item.priceYen?.toLocaleString()} ea</div>
+                            <div className="text-sm font-bold text-wafu-indigo font-mono">
+                                NT$ {totalPriceTwd.toLocaleString()}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-wafu-indigo bg-stone-50 px-2 py-1 rounded-lg border border-stone-100">
+                             <span>x{qty}</span>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
            );
         })}
-        
-        <button 
-          onClick={openAdd}
-          className="h-auto min-h-[280px] rounded-2xl border border-dashed border-wafu-indigo/20 flex flex-col items-center justify-center text-wafu-indigo/50 gap-3 hover:bg-wafu-indigo/5 hover:border-wafu-indigo/40 transition-all duration-100 active-bounce bg-white/40 font-serif"
-        >
-          <div className="w-10 h-10 rounded-full bg-wafu-indigo/10 flex items-center justify-center">
-            <Icons.Plus />
-          </div>
-          <span className="font-bold text-xs tracking-widest">追加</span>
-        </button>
       </div>
 
-       {deletedItems.length > 0 && (
+      <button 
+          onClick={openAdd}
+          className="w-full py-4 border border-dashed border-wafu-indigo/20 rounded-2xl text-wafu-indigo/60 flex items-center justify-center gap-2 hover:bg-white hover:border-wafu-indigo/50 hover:text-wafu-indigo transition-all duration-100 active-bounce font-bold tracking-widest bg-white/40 font-serif"
+        >
+          <Icons.Plus /> 新增項目
+      </button>
+
+      {deletedItems.length > 0 && (
           <div className="mt-8 px-2">
              <button 
                onClick={() => setShowTrash(!showTrash)}
                className="flex items-center gap-2 text-stone-400 hover:text-wafu-indigo text-xs font-bold uppercase tracking-wider mb-3 transition-colors active-bounce"
              >
                 <Icons.Trash />
-                <span>已刪除伴手禮 ({deletedItems.length})</span>
+                <span>已刪除項目 ({deletedItems.length})</span>
              </button>
              
              {showTrash && (
@@ -294,21 +319,22 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
                </div>
              )}
           </div>
-        )}
+      )}
 
       {isAdding && (
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
+        // Positioned at top-start for upper-half appearance
+        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-20 px-4 animate-fade-in">
+          <div className="bg-white w-full sm:max-w-md rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
              
-             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
+             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo z-20">
                  <button 
                     onClick={() => setIsAdding(false)} 
-                    className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2"
+                    className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2"
                  >
                     取消
                  </button>
                  <h3 className="text-lg font-bold font-serif text-white tracking-widest">
-                    {editingId ? '編輯伴手禮' : '伴手禮追加'}
+                    {editingId ? '編輯項目' : '新增伴手禮'}
                  </h3>
                  <button 
                     onClick={handleSave}
@@ -318,71 +344,94 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses }) => {
                     儲存
                  </button>
              </div>
-
-             <div className="flex-1 overflow-y-auto px-8 py-8 pb-32 relative bg-white">
+             
+             <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
-                <div className="relative z-10 space-y-4">
-                    <div className="flex gap-4">
-                      <div 
+                <div className="relative z-10">
+                    <div 
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-24 h-24 shrink-0 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-50 overflow-hidden relative active-bounce transition-transform"
-                      >
-                         {newItem.imageUrl ? (
-                           <img src={newItem.imageUrl} className="w-full h-full object-cover" alt="preview" />
-                         ) : (
-                           <div className="flex flex-col items-center text-stone-400">
-                             <Icons.Plus />
-                             <span className="text-[9px] mt-1 font-bold">圖片</span>
-                           </div>
-                         )}
-                         <input 
-                           type="file" 
-                           ref={fileInputRef} 
-                           onChange={handleImageUpload} 
-                           accept="image/*" 
-                           hidden 
-                         />
-                      </div>
-                      
-                      <div className="flex-1 space-y-4">
+                        className="w-full h-32 mb-6 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform"
+                    >
+                        {newItem.imageUrl ? (
+                            <img src={newItem.imageUrl} className="w-full h-full object-cover" alt="preview" />
+                        ) : (
+                            <div className="flex flex-col items-center text-stone-400">
+                                <Icons.Plus />
+                                <span className="text-[10px] mt-1 font-bold">商品照片</span>
+                            </div>
+                        )}
                         <input 
-                          className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo placeholder:text-stone-300 text-lg font-bold font-serif" 
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleImageUpload} 
+                            accept="image/*,image/heic,image/heif" 
+                            hidden 
+                        />
+                    </div>
+
+                    <div className="space-y-5">
+                        <input 
+                          className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-bold font-serif" 
                           placeholder="商品名稱"
                           value={newItem.name}
                           onChange={e => setNewItem({...newItem, name: e.target.value})}
-                          autoFocus
                         />
-                         <div className="relative flex gap-2">
-                             <div className="relative flex-1">
-                                <span className="absolute left-3 top-3 text-stone-400 font-serif text-sm">¥</span>
+
+                        {/* Flavor Tags Selection */}
+                        <div className="flex gap-4">
+                            <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
+                                ${newItem.flavor === 'sweet' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
                                 <input 
-                                type="number"
-                                className="w-full p-3 pl-8 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo font-mono text-base" 
-                                placeholder="單價"
-                                value={newItem.priceYen || ''}
-                                onChange={e => setNewItem({...newItem, priceYen: parseInt(e.target.value) || 0})}
+                                    type="radio" 
+                                    name="flavor" 
+                                    className="hidden" 
+                                    checked={newItem.flavor === 'sweet'} 
+                                    onChange={() => setNewItem({...newItem, flavor: 'sweet'})} 
                                 />
-                             </div>
-                             <div className="w-20 relative">
-                                <span className="absolute left-2 top-3 text-stone-400 text-xs">x</span>
+                                <span className="text-sm font-bold">甜食 🍰</span>
+                            </label>
+                            <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
+                                ${newItem.flavor === 'salty' ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
+                                <input 
+                                    type="radio" 
+                                    name="flavor" 
+                                    className="hidden" 
+                                    checked={newItem.flavor === 'salty'} 
+                                    onChange={() => setNewItem({...newItem, flavor: 'salty'})} 
+                                />
+                                <span className="text-sm font-bold">鹹食 🍘</span>
+                            </label>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            <div className="flex-1">
+                                <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">單價 (JPY)</label>
                                 <input 
                                     type="number"
-                                    className="w-full p-3 pl-5 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo font-mono text-base"
-                                    placeholder="Qty"
-                                    value={newItem.quantity}
-                                    onChange={e => setNewItem({...newItem, quantity: parseInt(e.target.value) || 1})}
+                                    className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-mono font-bold"
+                                    placeholder="0"
+                                    value={newItem.priceYen || ''}
+                                    onChange={e => setNewItem({...newItem, priceYen: parseInt(e.target.value) || 0})}
                                 />
-                             </div>
-                          </div>
-                      </div>
+                            </div>
+                            <div className="w-1/3">
+                                <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">數量</label>
+                                <input 
+                                    type="number"
+                                    className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-mono font-bold text-center"
+                                    value={newItem.quantity}
+                                    onChange={e => setNewItem({...newItem, quantity: Math.max(1, parseInt(e.target.value) || 1)})}
+                                />
+                            </div>
+                        </div>
+
+                        <textarea 
+                          className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-base" 
+                          placeholder="備註..."
+                          value={newItem.description}
+                          onChange={e => setNewItem({...newItem, description: e.target.value})}
+                        />
                     </div>
-                    
-                    <textarea 
-                      className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-base" 
-                      placeholder="詳細描述..."
-                      value={newItem.description}
-                      onChange={e => setNewItem({...newItem, description: e.target.value})}
-                    />
                 </div>
              </div>
           </div>

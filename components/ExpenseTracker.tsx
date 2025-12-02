@@ -15,15 +15,19 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showTrash, setShowTrash] = useState(false);
   
+  // Global Settings State (In a real app, this might be context)
+  const [exchangeRate, setExchangeRate] = useState(0.215);
+  const [isEditingRate, setIsEditingRate] = useState(false);
+
   // Form State
   const [amountInput, setAmountInput] = useState<string>('');
   const [title, setTitle] = useState('');
   const [currency, setCurrency] = useState<'JPY' | 'TWD'>('JPY');
   const [quantityInput, setQuantityInput] = useState<number>(1);
   const [dateInput, setDateInput] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [notesInput, setNotesInput] = useState('');
   
   // Calculator State
-  const [rate, setRate] = useState(0.215); 
   const [calcYen, setCalcYen] = useState<string>('');
   const [calcTwd, setCalcTwd] = useState<string>('');
   const [lastEdited, setLastEdited] = useState<'yen' | 'twd'>('yen');
@@ -32,18 +36,18 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
   const deletedExpenses = expenses.filter(ex => ex.deleted);
 
   const totalYen = activeExpenses.reduce((acc, curr) => acc + curr.amountYen, 0);
-  const totalTwd = Math.round(totalYen * rate);
+  const totalTwd = Math.round(totalYen * exchangeRate);
 
-  // Calculator Logic
+  // Calculator Logic inside Modal
   useEffect(() => {
     if (lastEdited === 'yen' && calcYen) {
         const num = parseFloat(calcYen);
-        if (!isNaN(num)) setCalcTwd(Math.round(num * rate).toString());
+        if (!isNaN(num)) setCalcTwd(Math.round(num * exchangeRate).toString());
     } else if (lastEdited === 'twd' && calcTwd) {
         const num = parseFloat(calcTwd);
-        if (!isNaN(num)) setCalcYen(Math.round(num / rate).toString());
+        if (!isNaN(num)) setCalcYen(Math.round(num / exchangeRate).toString());
     }
-  }, [rate, calcYen, calcTwd, lastEdited]);
+  }, [exchangeRate, calcYen, calcTwd, lastEdited]);
 
   const handleYenChange = (val: string) => {
     setLastEdited('yen');
@@ -54,7 +58,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
     }
     const num = parseFloat(val);
     if (!isNaN(num)) {
-        setCalcTwd(Math.round(num * rate).toString());
+        setCalcTwd(Math.round(num * exchangeRate).toString());
     }
   };
 
@@ -67,7 +71,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
     }
     const num = parseFloat(val);
     if (!isNaN(num)) {
-        setCalcYen(Math.round(num / rate).toString());
+        setCalcYen(Math.round(num / exchangeRate).toString());
     }
   };
   
@@ -78,6 +82,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
     setQuantityInput(1);
     setCurrency('JPY');
     setDateInput(new Date().toISOString().split('T')[0]);
+    setNotesInput('');
     setCalcYen('');
     setCalcTwd('');
     setIsAdding(true);
@@ -92,6 +97,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
     setAmountInput(unitPrice.toString());
     setQuantityInput(item.quantity || 1);
     setDateInput(item.date);
+    setNotesInput(item.notes || '');
     
     // Switch to JPY for editing simplicity
     setCurrency('JPY');
@@ -112,7 +118,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
     const inputVal = parseInt(amountInput);
 
     if (currency === 'TWD') {
-        finalAmountYen = Math.round(inputVal / rate);
+        finalAmountYen = Math.round(inputVal / exchangeRate);
     } else {
         finalAmountYen = inputVal;
     }
@@ -123,7 +129,8 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
         title,
         amountYen: finalAmountYen,
         quantity: quantityInput,
-        date: dateInput
+        date: dateInput,
+        notes: notesInput
     };
 
     (async () => {
@@ -184,15 +191,41 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight">旅費帳本</h2>
       </div>
 
-      {/* Summary Card - Moved to Top */}
+      {/* Summary Card with Editable Rate */}
       <div className="bg-wafu-indigo text-white rounded-2xl p-6 shadow-xl border border-wafu-indigo/50 relative overflow-hidden mb-8">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gold-leaf opacity-10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
             
             <div className="relative z-10">
-                <h4 className="text-xs font-bold text-wafu-goldLight mb-3 uppercase tracking-widest border-b border-white/10 pb-2 flex items-center gap-2">
-                <Icons.Wallet />
-                <span>總支出統計</span>
-                </h4>
+                <div className="flex justify-between items-start">
+                    <h4 className="text-xs font-bold text-wafu-goldLight mb-3 uppercase tracking-widest border-b border-white/10 pb-2 flex items-center gap-2">
+                        <Icons.Wallet />
+                        <span>總支出統計</span>
+                    </h4>
+                    
+                    {/* Editable Rate Setting */}
+                    <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+                        <span className="text-[10px] text-white/60 font-mono">Rate:</span>
+                        {isEditingRate ? (
+                            <input 
+                                autoFocus
+                                type="number"
+                                className="w-12 bg-transparent text-white text-right text-xs font-mono font-bold focus:outline-none"
+                                value={exchangeRate}
+                                step="0.001"
+                                onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)}
+                                onBlur={() => setIsEditingRate(false)}
+                            />
+                        ) : (
+                            <span 
+                                onClick={() => setIsEditingRate(true)}
+                                className="text-xs font-mono font-bold text-white cursor-pointer border-b border-dashed border-white/40 hover:text-wafu-goldLight"
+                            >
+                                {exchangeRate}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                
                 <div className="flex flex-col items-end">
                 <div className="text-4xl font-black font-serif tracking-tight flex items-baseline gap-1">
                     <span className="text-xl font-normal opacity-70">¥</span>
@@ -207,37 +240,49 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
 
       <div className="space-y-3 mb-8">
         {activeExpenses.map(ex => (
-          <div key={ex.id} onClick={(e) => handleEdit(ex)} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-stone-100 transition-transform active:scale-[0.98] group hover:border-wafu-indigo/30 relative overflow-hidden animate-zoom-in cursor-pointer">
+          <div key={ex.id} onClick={(e) => handleEdit(ex)} className="flex flex-col gap-2 bg-white p-4 rounded-2xl shadow-sm border border-stone-100 transition-transform active:scale-[0.98] group hover:border-wafu-indigo/30 relative overflow-hidden animate-zoom-in cursor-pointer">
             <div className="absolute inset-0 bg-wafu-paper opacity-30 pointer-events-none"></div>
-            <div className="relative z-10 flex items-center gap-4 min-w-0">
-              <div className="w-10 h-10 rounded-full border border-stone-200 text-xl flex items-center justify-center text-wafu-indigo font-serif bg-stone-50 shrink-0">
-                ¥
-              </div>
-              <div className="min-w-0">
-                <div className="font-bold text-stone-700 font-serif text-lg truncate pr-2">{ex.title}</div>
-                <div className="text-xs text-stone-400 mt-0.5 font-mono">{ex.date}</div>
-              </div>
+            
+            <div className="relative z-10 flex justify-between items-start">
+                <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 rounded-full border border-stone-200 text-xl flex items-center justify-center text-wafu-indigo font-serif bg-stone-50 shrink-0">
+                        ¥
+                    </div>
+                    <div className="min-w-0">
+                        <div className="font-bold text-stone-700 font-serif text-lg truncate pr-2">{ex.title}</div>
+                        <div className="text-xs text-stone-400 mt-0.5 font-mono">{ex.date}</div>
+                    </div>
+                </div>
+                
+                <div className="text-right shrink-0">
+                    <div className="font-mono font-bold text-wafu-indigo text-lg">¥{ex.amountYen.toLocaleString()}</div>
+                    <div className="text-xs text-stone-400 mt-0.5 font-medium">≈ NT${Math.round(ex.amountYen * exchangeRate).toLocaleString()}</div>
+                </div>
             </div>
-            <div className="relative z-10 flex items-center gap-4">
-               <div className="flex flex-col items-center gap-1 bg-stone-50 p-1 rounded-lg border border-stone-100" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => updateExpenseQuantity(ex.id, 1, ex)} className="text-stone-400 hover:text-wafu-indigo active-bounce w-4 h-4 flex items-center justify-center font-bold text-[10px]">+</button>
-                  <span className="text-[10px] font-bold text-wafu-indigo font-mono">x{ex.quantity || 1}</span>
-                  <button onClick={() => updateExpenseQuantity(ex.id, -1, ex)} className="text-stone-400 hover:text-wafu-indigo active-bounce w-4 h-4 flex items-center justify-center font-bold text-[10px]">-</button>
+
+            <div className="relative z-10 flex justify-between items-center mt-2 border-t border-stone-100 pt-2">
+               <div className="flex flex-col items-center gap-1 bg-stone-50 p-1 rounded-lg border border-stone-100 flex-row" onClick={e => e.stopPropagation()}>
+                  {/* Larger Buttons for Touch */}
+                  <button onClick={() => updateExpenseQuantity(ex.id, -1, ex)} className="text-stone-400 hover:text-wafu-indigo active-bounce w-8 h-8 flex items-center justify-center font-bold text-lg bg-white rounded-md shadow-sm border border-stone-100">-</button>
+                  <span className="text-sm font-bold text-wafu-indigo font-mono w-6 text-center">{ex.quantity || 1}</span>
+                  <button onClick={() => updateExpenseQuantity(ex.id, 1, ex)} className="text-stone-400 hover:text-wafu-indigo active-bounce w-8 h-8 flex items-center justify-center font-bold text-lg bg-white rounded-md shadow-sm border border-stone-100">+</button>
                </div>
                
-               <div className="text-right shrink-0 flex flex-col items-end">
-                <div className="font-mono font-bold text-wafu-indigo text-lg">¥{ex.amountYen.toLocaleString()}</div>
-                <div className="text-xs text-stone-400 mt-0.5 font-medium">≈ NT${Math.round(ex.amountYen * rate).toLocaleString()}</div>
-                <div className="flex gap-2 mt-2">
+               <div className="flex gap-2">
                     <button 
                         onClick={(e) => handleDelete(ex.id, e)}
-                        className="text-stone-300 hover:text-stone-500 active-bounce p-1"
+                        className="text-stone-300 hover:text-red-400 active-bounce p-2"
                     >
                         <Icons.Trash />
                     </button>
-                </div>
                </div>
             </div>
+            
+            {ex.notes && (
+                <div className="relative z-10 text-xs text-stone-500 bg-stone-50 p-2 rounded-lg mt-1 italic">
+                    {ex.notes}
+                </div>
+            )}
           </div>
         ))}
 
@@ -286,13 +331,13 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
       </div>
 
       {isAdding && (
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[90dvh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-20 px-4 animate-fade-in">
+          <div className="bg-white w-full sm:max-w-md rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
              
-             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
+             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo z-20">
                  <button 
                     onClick={() => setIsAdding(false)} 
-                    className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2"
+                    className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2"
                  >
                     取消
                  </button>
@@ -308,11 +353,11 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
                  </button>
              </div>
              
-             <div className="flex-1 overflow-y-auto px-6 py-6 pb-32 relative bg-white">
+             <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
                 <div className="relative z-10 space-y-6">
                     
-                    {/* Currency Calculator inside Modal */}
+                    {/* Currency Calculator inside Modal - Using Global Rate */}
                     <div className="relative overflow-hidden bg-gradient-to-br from-wafu-darkIndigo to-wafu-indigo rounded-2xl p-4 text-white shadow-inner ring-1 ring-wafu-indigo/50">
                         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")` }}></div>
                         <h3 className="text-[10px] text-wafu-goldLight mb-3 font-bold tracking-[0.2em] uppercase flex justify-between">
@@ -342,15 +387,8 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
                                 />
                             </div>
                         </div>
-                         <div className="flex items-center justify-end gap-2 mt-2">
-                            <span className="text-[9px] text-white/40 font-mono tracking-wider">Rate:</span>
-                            <input 
-                            type="number" 
-                            value={rate} 
-                            onChange={(e) => setRate(parseFloat(e.target.value) || 0)}
-                            step="0.001"
-                            className="w-12 bg-white/10 border border-white/20 rounded px-1 py-0.5 text-[10px] text-white text-right focus:outline-none"
-                            />
+                        <div className="flex justify-end">
+                            <span className="text-[9px] text-white/40 font-mono tracking-wider">Current Rate: {exchangeRate}</span>
                         </div>
                     </div>
 
@@ -393,10 +431,18 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses }) => {
                                 type="number"
                                 value={quantityInput}
                                 onChange={(e) => setQuantityInput(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-full p-3 pl-6 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:border-wafu-indigo font-mono text-lg"
+                                className="w-full p-3 pl-6 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:border-wafu-indigo font-mono text-lg text-center"
                                 />
                             </div>
                         </div>
+
+                        {/* Notes Field */}
+                        <textarea 
+                            value={notesInput}
+                            onChange={(e) => setNotesInput(e.target.value)}
+                            placeholder="備註..."
+                            className="w-full p-3 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:border-wafu-indigo h-24 resize-none text-base"
+                        />
                     </div>
                 </div>
              </div>

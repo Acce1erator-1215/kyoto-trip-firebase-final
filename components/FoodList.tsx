@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Restaurant } from '../types';
 import { Icons } from './Icon';
@@ -9,17 +10,22 @@ interface Props {
   setItems: any; // Legacy
 }
 
+const PREDEFINED_TAGS = ['拉麵', '甜點', '咖哩', '燒肉', '火鍋', '大阪燒', '壽司', '咖啡'];
+
 export const FoodList: React.FC<Props> = ({ items }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [activeTagFilter, setActiveTagFilter] = useState<string>('All');
+  const [customTagInput, setCustomTagInput] = useState('');
   
   const [form, setForm] = useState<Partial<Restaurant>>({
     name: '',
     description: '',
     rating: 3.0,
     imageUrl: '',
-    mapsUrl: ''
+    mapsUrl: '',
+    tags: []
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,16 +33,22 @@ export const FoodList: React.FC<Props> = ({ items }) => {
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
 
+  const filteredItems = activeTagFilter === 'All' 
+    ? activeItems 
+    : activeItems.filter(i => i.tags?.includes(activeTagFilter));
+
   const openAdd = () => {
     setEditingId(null);
-    setForm({ name: '', description: '', rating: 3.0, imageUrl: '', mapsUrl: '' });
+    setForm({ name: '', description: '', rating: 3.0, imageUrl: '', mapsUrl: '', tags: [] });
+    setCustomTagInput('');
     setIsAdding(true);
   };
 
   const openEdit = (item: Restaurant, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(item.id);
-    setForm({ ...item });
+    setForm({ ...item, tags: item.tags || [] });
+    setCustomTagInput('');
     setIsAdding(true);
   };
 
@@ -59,6 +71,7 @@ export const FoodList: React.FC<Props> = ({ items }) => {
                     rating: form.rating || 3.0,
                     imageUrl: form.imageUrl || `https://picsum.photos/300/200?food=${newId}`,
                     mapsUrl: form.mapsUrl || '',
+                    tags: form.tags || [],
                     deleted: false
                 });
             }
@@ -92,14 +105,49 @@ export const FoodList: React.FC<Props> = ({ items }) => {
     }
   };
 
+  const toggleTag = (tag: string) => {
+      const currentTags = form.tags || [];
+      if (currentTags.includes(tag)) {
+          setForm({ ...form, tags: currentTags.filter(t => t !== tag) });
+      } else {
+          setForm({ ...form, tags: [...currentTags, tag] });
+      }
+  };
+
+  const addCustomTag = () => {
+      if (customTagInput && !form.tags?.includes(customTagInput)) {
+          setForm({ ...form, tags: [...(form.tags || []), customTagInput] });
+          setCustomTagInput('');
+      }
+  };
+
   return (
     <div className="pb-40 px-5">
-      <div className="mb-8 border-b border-wafu-indigo/20 pb-4 mx-1">
+      <div className="mb-4 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">美食清單</h2>
       </div>
 
+      {/* Scrollable Filter Bar */}
+      <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
+         <button 
+           onClick={() => setActiveTagFilter('All')}
+           className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${activeTagFilter === 'All' ? 'bg-wafu-indigo text-white border-wafu-indigo' : 'bg-white text-stone-400 border-stone-200'}`}
+         >
+            全部 ({activeItems.length})
+         </button>
+         {PREDEFINED_TAGS.map(tag => (
+             <button 
+                key={tag}
+                onClick={() => setActiveTagFilter(tag)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${activeTagFilter === tag ? 'bg-wafu-gold text-white border-wafu-gold' : 'bg-white text-stone-400 border-stone-200'}`}
+             >
+                {tag}
+             </button>
+         ))}
+      </div>
+
       <div className="space-y-6">
-        {activeItems.map(item => (
+        {filteredItems.map(item => (
            <div key={item.id} className="bg-white rounded-2xl shadow-washi border border-stone-100 overflow-hidden flex flex-col sm:flex-row group transition-all hover:shadow-luxury relative active:scale-[0.99] duration-200 animate-zoom-in">
               <div className="sm:w-32 h-40 sm:h-auto relative">
                  <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
@@ -125,7 +173,13 @@ export const FoodList: React.FC<Props> = ({ items }) => {
                             </button>
                         </div>
                     </div>
-                    <p className="text-sm text-stone-500 mt-2 line-clamp-2 leading-relaxed">{item.description}</p>
+                    {/* Tags Display */}
+                    <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
+                        {item.tags?.map(tag => (
+                            <span key={tag} className="text-[9px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded font-bold">{tag}</span>
+                        ))}
+                    </div>
+                    <p className="text-sm text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
                  </div>
               </div>
            </div>
@@ -176,13 +230,13 @@ export const FoodList: React.FC<Props> = ({ items }) => {
       </div>
 
       {isAdding && (
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-20 px-4 animate-fade-in">
+          <div className="bg-white w-full sm:max-w-md rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
              
-             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
+             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo z-20">
                  <button 
                     onClick={() => setIsAdding(false)} 
-                    className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2"
+                    className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2"
                  >
                     取消
                  </button>
@@ -198,7 +252,7 @@ export const FoodList: React.FC<Props> = ({ items }) => {
                  </button>
              </div>
              
-             <div className="flex-1 overflow-y-auto px-8 py-8 pb-32 relative bg-white">
+             <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
                 <div className="relative z-10">
                     <div 
@@ -213,7 +267,13 @@ export const FoodList: React.FC<Props> = ({ items }) => {
                                 <span className="text-[10px] mt-1 font-bold">餐廳照片</span>
                             </div>
                         )}
-                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" hidden />
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleImageUpload} 
+                            accept="image/*,image/heic,image/heif" 
+                            hidden 
+                        />
                     </div>
 
                     <div className="space-y-6">
@@ -223,6 +283,39 @@ export const FoodList: React.FC<Props> = ({ items }) => {
                           value={form.name}
                           onChange={e => setForm({...form, name: e.target.value})}
                         />
+
+                        {/* Tag Selection Area */}
+                        <div>
+                            <label className="text-xs text-stone-400 font-bold uppercase mb-2 block">標籤</label>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {PREDEFINED_TAGS.map(tag => (
+                                    <button
+                                        key={tag}
+                                        onClick={() => toggleTag(tag)}
+                                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-95 border
+                                            ${form.tags?.includes(tag) 
+                                                ? 'bg-wafu-indigo text-white border-wafu-indigo' 
+                                                : 'bg-stone-50 text-stone-400 border-stone-200 hover:border-wafu-indigo/50'}`}
+                                    >
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <input 
+                                    className="flex-1 p-2 bg-stone-50 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-wafu-indigo"
+                                    placeholder="自訂標籤..."
+                                    value={customTagInput}
+                                    onChange={e => setCustomTagInput(e.target.value)}
+                                />
+                                <button 
+                                    onClick={addCustomTag}
+                                    className="px-3 py-1 bg-stone-200 text-stone-600 rounded-lg font-bold text-xs"
+                                >
+                                    新增
+                                </button>
+                            </div>
+                        </div>
                         
                         <div>
                              <div className="flex justify-between items-center mb-2">
@@ -231,7 +324,6 @@ export const FoodList: React.FC<Props> = ({ items }) => {
                                     <Icons.Star filled /> {typeof form.rating === 'number' ? form.rating.toFixed(1) : '3.0'}
                                 </span>
                              </div>
-                             {/* UPDATED SLIDER: Using custom class and touch-action */}
                              <input 
                                 type="range" 
                                 min="1" 
@@ -258,7 +350,7 @@ export const FoodList: React.FC<Props> = ({ items }) => {
                         </div>
 
                         <textarea 
-                          className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-sm" 
+                          className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-base" 
                           placeholder="評價與備註..."
                           value={form.description}
                           onChange={e => setForm({...form, description: e.target.value})}

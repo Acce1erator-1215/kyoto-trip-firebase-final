@@ -22,6 +22,7 @@ export interface Expense {
   payer: string;
   date: string;
   quantity?: number;
+  notes?: string; // Added notes
   deleted?: boolean; // Soft delete
 }
 
@@ -34,6 +35,7 @@ export interface ShoppingItem {
   bought: boolean;
   quantity?: number;
   linkedExpenseId?: string;
+  flavor?: 'sweet' | 'salty'; // Added flavor
   deleted?: boolean; // Soft delete
 }
 
@@ -44,6 +46,7 @@ export interface Restaurant {
   rating: number; // 1-5
   imageUrl?: string;
   mapsUrl?: string;
+  tags?: string[]; // Added tags
   deleted?: boolean; // Soft delete
 }
 
