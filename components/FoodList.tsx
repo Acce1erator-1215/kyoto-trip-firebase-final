@@ -1,11 +1,10 @@
-
 import React, { useState, useRef } from 'react';
 import { Restaurant } from '../types';
 import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { resizeImage } from '../services/imageUtils';
-import { calculateDistance, formatDistance, parseCoordinatesFromUrl } from '../services/geoUtils';
+import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
 
 interface Props {
   items: Restaurant[];
@@ -20,6 +19,7 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Multi-select state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
@@ -125,15 +125,16 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
     setIsAdding(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name) return;
     
-    setIsAdding(false);
+    setIsSubmitting(true);
 
     let lat = form.lat;
     let lng = form.lng;
+
+    // 1. Try URL parse
     if (form.mapsUrl) {
-        // Always try to re-parse coordinates on save to ensure accuracy if user updated URL
         const coords = parseCoordinatesFromUrl(form.mapsUrl);
         if (coords) {
             lat = coords.lat;
@@ -141,34 +142,45 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
         }
     }
 
+    // 2. Fallback: Search by name
+    if ((!lat || !lng) && form.name) {
+         console.log("Searching coordinates by name:", form.name);
+         const searchResult = await searchLocationByName(form.name);
+         if (searchResult) {
+             lat = searchResult.lat;
+             lng = searchResult.lng;
+         }
+    }
+
     const finalData = { ...form, lat, lng };
 
-    (async () => {
-        try {
-            if (editingId) {
-                const cleanData = JSON.parse(JSON.stringify(finalData));
-                await updateDoc(doc(db, 'restaurants', editingId), cleanData);
-            } else {
-                const newId = Date.now().toString();
-                const item = {
-                    id: newId,
-                    name: form.name,
-                    description: form.description || '',
-                    rating: form.rating || 3.0,
-                    imageUrl: form.imageUrl || `https://picsum.photos/300/200?food=${newId}`,
-                    mapsUrl: form.mapsUrl || '',
-                    tags: form.tags || [],
-                    lat,
-                    lng,
-                    deleted: false
-                };
-                const cleanItem = JSON.parse(JSON.stringify(item));
-                await setDoc(doc(db, 'restaurants', newId), cleanItem);
-            }
-        } catch (err) {
-            console.error("Error saving restaurant:", err);
+    try {
+        if (editingId) {
+            const cleanData = JSON.parse(JSON.stringify(finalData));
+            await updateDoc(doc(db, 'restaurants', editingId), cleanData);
+        } else {
+            const newId = Date.now().toString();
+            const item = {
+                id: newId,
+                name: form.name,
+                description: form.description || '',
+                rating: form.rating || 3.0,
+                imageUrl: form.imageUrl || '', // No auto image
+                mapsUrl: form.mapsUrl || '',
+                tags: form.tags || [],
+                lat,
+                lng,
+                deleted: false
+            };
+            const cleanItem = JSON.parse(JSON.stringify(item));
+            await setDoc(doc(db, 'restaurants', newId), cleanItem);
         }
-    })();
+        setIsAdding(false);
+    } catch (err) {
+        console.error("Error saving restaurant:", err);
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -258,8 +270,15 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
              onClick={() => hasMap && onFocus && onFocus(item.lat!, item.lng!)}
              className={`bg-white rounded-2xl shadow-washi border border-stone-100 overflow-hidden flex flex-col sm:flex-row group transition-all hover:shadow-luxury relative active:scale-[0.99] duration-200 animate-zoom-in ${hasMap ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
            >
-              <div className="sm:w-32 h-40 sm:h-auto relative">
-                 <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+              <div className="sm:w-32 h-40 sm:h-auto relative bg-stone-50">
+                 {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                 ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-stone-300">
+                        <Icons.Utensils className="w-8 h-8 mb-1" strokeWidth={1.5} />
+                        <span className="text-[10px] font-bold">無照片</span>
+                    </div>
+                 )}
                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur rounded px-2 py-0.5 text-xs font-bold text-wafu-gold shadow-sm flex items-center gap-1">
                     <Icons.Star filled /> {item.rating.toFixed(1)}
                  </div>
@@ -330,7 +349,9 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
              <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo z-20">
                  <button onClick={() => setIsAdding(false)} className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2">取消</button>
                  <h3 className="text-lg font-bold font-serif text-white tracking-widest">{editingId ? '編輯餐廳' : '新增餐廳'}</h3>
-                 <button onClick={handleSave} disabled={!form.name} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">儲存</button>
+                 <button onClick={handleSave} disabled={!form.name || isSubmitting} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">
+                    {isSubmitting ? '...' : '儲存'}
+                 </button>
              </div>
              
              <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
@@ -370,7 +391,7 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
                         </div>
 
                         <div className="relative">
-                            <input className="w-full p-3 pl-9 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm" placeholder="Google Maps 連結" value={form.mapsUrl} onChange={e => setForm({...form, mapsUrl: e.target.value})} />
+                            <input className="w-full p-3 pl-9 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm" placeholder="Google Maps 連結 (或留空自動搜尋)..." value={form.mapsUrl} onChange={e => setForm({...form, mapsUrl: e.target.value})} />
                             <div className="absolute left-3 top-3.5 text-stone-400"><Icons.MapLink /></div>
                         </div>
 

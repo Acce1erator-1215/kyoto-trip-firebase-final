@@ -36,6 +36,8 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
    */
   export const parseCoordinatesFromUrl = (url: string): { lat: number, lng: number } | null => {
     try {
+      if (!url) return null;
+      
       // Priority 1: Data parameters !3d and !4d (Exact marker location)
       // Example: ...!3d34.9997865!4d135.7601172...
       const dataLatMatch = url.match(/!3d(-?\d+(\.\d+)?)/);
@@ -75,4 +77,34 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
       console.warn("Failed to parse coordinates from URL", e);
       return null;
     }
+  };
+
+  /**
+   * Fallback: Search for location by name using OpenStreetMap (Nominatim) API.
+   * This is used when the Google Maps URL doesn't contain coordinates (short links).
+   */
+  export const searchLocationByName = async (query: string): Promise<{ lat: number, lng: number } | null> => {
+      if (!query) return null;
+      try {
+          // Append 'Kyoto' to context, assuming the trip is in Kyoto/Japan to improve accuracy
+          // However, if the user types a full address, we use it as is.
+          const searchQuery = query.includes('日本') || query.includes('Japan') || query.includes('Kyoto') || query.includes('京都') 
+              ? query 
+              : `${query} Kyoto Japan`;
+          
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`;
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          if (data && data.length > 0) {
+              return {
+                  lat: parseFloat(data[0].lat),
+                  lng: parseFloat(data[0].lon)
+              };
+          }
+          return null;
+      } catch (error) {
+          console.error("Geocoding search failed:", error);
+          return null;
+      }
   };

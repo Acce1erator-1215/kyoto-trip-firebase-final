@@ -5,7 +5,7 @@ import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { resizeImage } from '../services/imageUtils';
-import { calculateDistance, formatDistance, parseCoordinatesFromUrl } from '../services/geoUtils';
+import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
 
 interface ItineraryProps {
   dayIndex: number;
@@ -79,16 +79,19 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
     setModalMode('add');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!itemForm.location) return;
     
-    setModalMode('closed');
+    // Close modal immediately for UX, but show loading state internally if needed? 
+    // Actually we keep modal open or show loading overlay? 
+    // For now, let's just wait for the geocoding before closing fully or fire-and-forget?
+    // Fire-and-forget is risky if we want coords. Let's await.
     setIsSubmitting(true);
 
     let lat = itemForm.lat;
     let lng = itemForm.lng;
     
-    // Check mapsUrl strictly to allow overwriting existing coordinates
+    // 1. Try to parse from URL first (Most accurate)
     if (itemForm.mapsUrl) {
         const coords = parseCoordinatesFromUrl(itemForm.mapsUrl);
         if (coords) {
@@ -97,38 +100,47 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
         }
     }
 
+    // 2. Fallback: If no coords found (e.g. short link) but name exists, search via API
+    if ((!lat || !lng) && itemForm.location) {
+         console.log("No coords in URL, searching by name:", itemForm.location);
+         const searchResult = await searchLocationByName(itemForm.location);
+         if (searchResult) {
+             lat = searchResult.lat;
+             lng = searchResult.lng;
+         }
+    }
+
     const finalData = { ...itemForm, lat, lng };
 
-    (async () => {
-      try {
-        if (modalMode === 'edit' && itemForm.id) {
-            const cleanData = JSON.parse(JSON.stringify(finalData));
-            await updateDoc(doc(db, 'itinerary', itemForm.id), cleanData);
-        } else {
-            const newItemId = Date.now().toString();
-            const item: ItineraryItem = {
-                id: newItemId,
-                day: dayIndex,
-                time: itemForm.time || '',
-                location: itemForm.location || '',
-                category: itemForm.category as Category,
-                notes: itemForm.notes || '',
-                completed: false,
-                imageUrl: itemForm.imageUrl || '',
-                mapsUrl: itemForm.mapsUrl || '',
-                lat,
-                lng,
-                deleted: false
-            };
-            const cleanItem = JSON.parse(JSON.stringify(item));
-            await setDoc(doc(db, 'itinerary', newItemId), cleanItem);
-        }
-      } catch (err) {
-        console.error("Error saving itinerary:", err);
-      } finally {
-        setIsSubmitting(false);
+    try {
+      if (modalMode === 'edit' && itemForm.id) {
+          const cleanData = JSON.parse(JSON.stringify(finalData));
+          await updateDoc(doc(db, 'itinerary', itemForm.id), cleanData);
+      } else {
+          const newItemId = Date.now().toString();
+          const item: ItineraryItem = {
+              id: newItemId,
+              day: dayIndex,
+              time: itemForm.time || '',
+              location: itemForm.location || '',
+              category: itemForm.category as Category,
+              notes: itemForm.notes || '',
+              completed: false,
+              imageUrl: itemForm.imageUrl || '',
+              mapsUrl: itemForm.mapsUrl || '',
+              lat,
+              lng,
+              deleted: false
+          };
+          const cleanItem = JSON.parse(JSON.stringify(item));
+          await setDoc(doc(db, 'itinerary', newItemId), cleanItem);
       }
-    })();
+      setModalMode('closed');
+    } catch (err) {
+      console.error("Error saving itinerary:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,7 +337,9 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-3xl shadow-md z-20">
                   <button onClick={() => setModalMode('closed')} className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2">取消</button>
                   <div className="font-bold text-white font-serif text-lg tracking-widest">{modalMode === 'add' ? (isTodo ? '待辦事項' : '行程追加') : '編輯行程'}</div>
-                  <button onClick={handleSubmit} disabled={!itemForm.location} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">儲存</button>
+                  <button onClick={handleSubmit} disabled={!itemForm.location || isSubmitting} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">
+                     {isSubmitting ? '...' : '儲存'}
+                  </button>
                </div>
 
                <div className="flex-1 overflow-y-auto px-6 py-6 pb-32 relative bg-white">
@@ -361,7 +375,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
                        <input type="text" placeholder={isTodo ? "事項名稱..." : "地點名稱..."} value={itemForm.location} onChange={e => setItemForm({...itemForm, location: e.target.value})} className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo font-bold text-base placeholder:font-normal placeholder:text-stone-300 font-serif" />
                        {!isTodo && (
                          <div className="relative">
-                            <input type="text" placeholder="Google Map 連結..." value={itemForm.mapsUrl} onChange={e => setItemForm({...itemForm, mapsUrl: e.target.value})} className="w-full p-2 pl-8 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-xs text-stone-600" />
+                            <input type="text" placeholder="Google Map 連結 (或留空自動搜尋)..." value={itemForm.mapsUrl} onChange={e => setItemForm({...itemForm, mapsUrl: e.target.value})} className="w-full p-2 pl-8 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-xs text-stone-600" />
                             <div className="absolute left-2 top-2.5 text-stone-400"><Icons.MapLink /></div>
                          </div>
                        )}

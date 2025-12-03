@@ -1,11 +1,10 @@
-
 import React, { useState, useRef } from 'react';
 import { SightseeingSpot } from '../types';
 import { Icons } from './Icon';
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { resizeImage } from '../services/imageUtils';
-import { calculateDistance, formatDistance, parseCoordinatesFromUrl } from '../services/geoUtils';
+import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
 
 interface Props {
   items: SightseeingSpot[];
@@ -18,6 +17,7 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [form, setForm] = useState<Partial<SightseeingSpot>>({
     name: '',
@@ -46,15 +46,15 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
     setIsAdding(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name) return;
     
-    setIsAdding(false);
+    setIsSubmitting(true);
 
     let lat = form.lat;
     let lng = form.lng;
     
-    // Check mapsUrl strictly to allow overwriting existing coordinates
+    // 1. Try URL parse
     if (form.mapsUrl) {
         const coords = parseCoordinatesFromUrl(form.mapsUrl);
         if (coords) {
@@ -63,32 +63,43 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
         }
     }
 
+    // 2. Fallback: Search by name
+    if ((!lat || !lng) && form.name) {
+         console.log("Searching coordinates by name:", form.name);
+         const searchResult = await searchLocationByName(form.name);
+         if (searchResult) {
+             lat = searchResult.lat;
+             lng = searchResult.lng;
+         }
+    }
+
     const finalData = { ...form, lat, lng };
 
-    (async () => {
-        try {
-            if (editingId) {
-                const cleanData = JSON.parse(JSON.stringify(finalData));
-                await updateDoc(doc(db, 'sightseeing', editingId), cleanData);
-            } else {
-                const newId = Date.now().toString();
-                const item = {
-                    id: newId,
-                    name: form.name,
-                    description: form.description || '',
-                    imageUrl: form.imageUrl || `https://picsum.photos/300/200?sight=${newId}`,
-                    mapsUrl: form.mapsUrl || '',
-                    lat,
-                    lng,
-                    deleted: false
-                };
-                const cleanItem = JSON.parse(JSON.stringify(item));
-                await setDoc(doc(db, 'sightseeing', newId), cleanItem);
-            }
-        } catch (err) {
-            console.error("Error saving spot:", err);
+    try {
+        if (editingId) {
+            const cleanData = JSON.parse(JSON.stringify(finalData));
+            await updateDoc(doc(db, 'sightseeing', editingId), cleanData);
+        } else {
+            const newId = Date.now().toString();
+            const item = {
+                id: newId,
+                name: form.name,
+                description: form.description || '',
+                imageUrl: form.imageUrl || '', // No auto image
+                mapsUrl: form.mapsUrl || '',
+                lat,
+                lng,
+                deleted: false
+            };
+            const cleanItem = JSON.parse(JSON.stringify(item));
+            await setDoc(doc(db, 'sightseeing', newId), cleanItem);
         }
-    })();
+        setIsAdding(false);
+    } catch (err) {
+        console.error("Error saving spot:", err);
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -137,8 +148,15 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
              onClick={() => hasMap && onFocus && onFocus(item.lat!, item.lng!)}
              className={`bg-white rounded-2xl shadow-washi border border-stone-100 overflow-hidden flex flex-col sm:flex-row group transition-all hover:shadow-luxury relative animate-zoom-in ${hasMap ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
            >
-              <div className="sm:w-32 h-40 sm:h-auto relative">
-                 <img src={item.imageUrl || `https://picsum.photos/300/200?sight=${item.id}`} alt={item.name} className="w-full h-full object-cover" />
+              <div className="sm:w-32 h-40 sm:h-auto relative bg-stone-50">
+                 {item.imageUrl ? (
+                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                 ) : (
+                     <div className="w-full h-full flex flex-col items-center justify-center text-stone-300">
+                        <Icons.MapPin className="w-8 h-8 mb-1" strokeWidth={1.5} />
+                        <span className="text-[10px] font-bold">無照片</span>
+                     </div>
+                 )}
               </div>
               <div className="p-4 flex-1 flex flex-col justify-between">
                  <div>
@@ -203,7 +221,9 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
              <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
                  <button onClick={() => setIsAdding(false)} className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2">取消</button>
                  <h3 className="text-lg font-bold font-serif text-white tracking-widest">{editingId ? '編輯景點' : '新增景點'}</h3>
-                 <button onClick={handleSave} disabled={!form.name} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">儲存</button>
+                 <button onClick={handleSave} disabled={!form.name || isSubmitting} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">
+                    {isSubmitting ? '...' : '儲存'}
+                 </button>
              </div>
              
              <div className="flex-1 overflow-y-auto px-8 py-8 pb-32 relative bg-white">
@@ -222,7 +242,7 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
                         <input className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-bold font-serif" placeholder="景點名稱" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
                         
                         <div className="relative">
-                            <input className="w-full p-3 pl-9 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm" placeholder="Google Maps 連結" value={form.mapsUrl} onChange={e => setForm({...form, mapsUrl: e.target.value})} />
+                            <input className="w-full p-3 pl-9 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm" placeholder="Google Maps 連結 (或留空自動搜尋)..." value={form.mapsUrl} onChange={e => setForm({...form, mapsUrl: e.target.value})} />
                             <div className="absolute left-3 top-3.5 text-stone-400"><Icons.MapLink /></div>
                         </div>
 

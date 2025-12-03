@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, MouseEvent, useEffect } from 'react';
 import { ItineraryItem, Expense, ShoppingItem, Restaurant, SightseeingSpot, DATES } from './types';
 import { Itinerary } from './components/Itinerary';
@@ -116,12 +115,20 @@ const FlightPass = ({
                  {isFlying && (
                     <div className="absolute right-[50%] top-1/2 -mt-1 w-24 h-2 bg-gradient-to-l from-wafu-gold/60 to-transparent blur-sm rounded-full transform translate-x-1 origin-right opacity-80"></div>
                  )}
+                 {/* Engine Pulse Ring */}
+                 {isFlying && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 border border-wafu-gold/50 rounded-full animate-engine-pulse"></div>
+                 )}
 
                  {/* The icon naturally points Top-Right. rotate-45 makes it point Right (Horizontal). */}
                  <div className={`text-wafu-gold transition-all duration-500 relative
                      ${isFlying ? 'animate-plane-cruise' : 'rotate-45'}
                  `}>
                     <Icons.Plane />
+                    {/* Wing Sparkle */}
+                    {isFlying && (
+                      <div className="absolute top-0 right-0 w-1 h-1 bg-white rounded-full animate-sparkle-fade shadow-[0_0_4px_white]"></div>
+                    )}
                  </div>
              </div>
              
@@ -498,6 +505,20 @@ export default function App() {
       }
   };
 
+  // Center on User
+  const handleCenterOnUser = () => {
+    if (userLocation) {
+      if (!showMap) setShowMap(true);
+      // Create new object to force effect even if location hasn't changed
+      setFocusedLocation({ ...userLocation }); 
+      if (mainContentDrag.ref.current) {
+        mainContentDrag.ref.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else {
+      alert("定位中...請稍候");
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base ring-1 ring-black/5">
       <SpeedInsights />
@@ -557,11 +578,17 @@ export default function App() {
             <>
               <DateSelector selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
               
-              <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative">
+              <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative gap-2">
                   <button onClick={() => setShowMap(!showMap)} className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border ${showMap ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' : 'bg-white text-stone-400 border-stone-200 hover:border-wafu-indigo/30'}`}>
                     <Icons.MapPin className="w-3 h-3" strokeWidth={2.5} />
                     <span>{showMap ? "隱藏地圖" : "顯示地圖"}</span>
                   </button>
+                  {showMap && userLocation && (
+                    <button onClick={handleCenterOnUser} className="flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border bg-white text-wafu-indigo border-wafu-indigo/30 hover:border-wafu-indigo hover:bg-wafu-indigo/5">
+                        <Icons.Navigation className="w-3 h-3" strokeWidth={2.5} />
+                        <span>定位</span>
+                    </button>
+                  )}
               </div>
 
               {showMap && (
@@ -589,11 +616,17 @@ export default function App() {
           {activeTab === 'sightseeing' && (
             <>
                 {/* Map Toggle for Sightseeing */}
-                <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative">
+                <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative gap-2">
                     <button onClick={() => setShowMap(!showMap)} className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border ${showMap ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' : 'bg-white text-stone-400 border-stone-200 hover:border-wafu-indigo/30'}`}>
                         <Icons.MapPin className="w-3 h-3" strokeWidth={2.5} />
                         <span>{showMap ? "隱藏地圖" : "顯示地圖"}</span>
                     </button>
+                     {showMap && userLocation && (
+                        <button onClick={handleCenterOnUser} className="flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border bg-white text-wafu-indigo border-wafu-indigo/30 hover:border-wafu-indigo hover:bg-wafu-indigo/5">
+                            <Icons.Navigation className="w-3 h-3" strokeWidth={2.5} />
+                            <span>定位</span>
+                        </button>
+                    )}
                 </div>
 
                 {showMap && (
@@ -610,11 +643,17 @@ export default function App() {
           {activeTab === 'food' && (
              <>
                 {/* Map Toggle for Food */}
-                <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative">
+                <div className="flex justify-center py-2 bg-wafu-paper/50 backdrop-blur-sm border-b border-stone-100 z-10 relative gap-2">
                     <button onClick={() => setShowMap(!showMap)} className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border ${showMap ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' : 'bg-white text-stone-400 border-stone-200 hover:border-wafu-indigo/30'}`}>
                         <Icons.MapPin className="w-3 h-3" strokeWidth={2.5} />
                         <span>{showMap ? "隱藏地圖" : "顯示地圖"}</span>
                     </button>
+                    {showMap && userLocation && (
+                        <button onClick={handleCenterOnUser} className="flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border bg-white text-wafu-indigo border-wafu-indigo/30 hover:border-wafu-indigo hover:bg-wafu-indigo/5">
+                            <Icons.Navigation className="w-3 h-3" strokeWidth={2.5} />
+                            <span>定位</span>
+                        </button>
+                    )}
                 </div>
 
                 {showMap && (
