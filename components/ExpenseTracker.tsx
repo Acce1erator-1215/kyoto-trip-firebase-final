@@ -1,39 +1,51 @@
+
 import React, { useState, useEffect } from 'react';
 import { Expense } from '../types';
 import { Icons } from './Icon';
-import { db } from '../firebase';
+import { db, sanitizeData } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { Modal } from './common/Modal';
 
 interface Props {
   expenses: Expense[];
-  setExpenses: any; // Legacy
   currentRate?: number;
+  refreshRate?: () => void;
+  rateLastUpdated?: Date | null;
+  isRateLoading?: boolean;
 }
 
-export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }) => {
+/**
+ * 支出紀錄追蹤組件 (Expense Tracker)
+ */
+export const ExpenseTracker: React.FC<Props> = ({ 
+  expenses, 
+  currentRate = 0.22,
+  refreshRate,
+  rateLastUpdated,
+  isRateLoading
+}) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showTrash, setShowTrash] = useState(false);
   
-  // Local state for manual override, but defaults to prop
+  // 本地匯率狀態
   const [exchangeRate, setExchangeRate] = useState(currentRate);
   
-  // Sync prop changes if user hasn't manually edited (simplified logic: always sync on prop change)
   useEffect(() => {
       setExchangeRate(currentRate);
   }, [currentRate]);
 
   const [isEditingRate, setIsEditingRate] = useState(false);
 
-  // Form State
+  // 表單狀態
   const [amountInput, setAmountInput] = useState<string>('');
   const [title, setTitle] = useState('');
-  const [currency, setCurrency] = useState<'JPY' | 'TWD'>('JPY');
+  const [currency, setCurrency] = useState<'JPY' | 'TWD'>('JPY'); 
   const [quantityInput, setQuantityInput] = useState<number>(1);
   const [dateInput, setDateInput] = useState<string>(new Date().toISOString().split('T')[0]);
   const [notesInput, setNotesInput] = useState('');
   
-  // Calculator State
+  // 計算機狀態
   const [calcYen, setCalcYen] = useState<string>('');
   const [calcTwd, setCalcTwd] = useState<string>('');
   const [lastEdited, setLastEdited] = useState<'yen' | 'twd'>('yen');
@@ -44,7 +56,8 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
   const totalYen = activeExpenses.reduce((acc, curr) => acc + curr.amountYen, 0);
   const totalTwd = Math.round(totalYen * exchangeRate);
 
-  // Calculator Logic inside Modal
+  // --- 計算機邏輯 ---
+  // 優化：僅在匯率變動時觸發自動計算，避免輸入時的競爭條件 (Race Condition)
   useEffect(() => {
     if (lastEdited === 'yen' && calcYen) {
         const num = parseFloat(calcYen);
@@ -53,13 +66,14 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
         const num = parseFloat(calcTwd);
         if (!isNaN(num)) setCalcYen(Math.round(num / exchangeRate).toString());
     }
-  }, [exchangeRate, calcYen, calcTwd, lastEdited]);
+  }, [exchangeRate]);
 
+  // 處理日幣輸入變更
   const handleYenChange = (val: string) => {
     setLastEdited('yen');
     setCalcYen(val);
     if (val === '') {
-        setCalcTwd('');
+        setCalcTwd(''); // 強制清空另一欄，防止殘留
         return;
     }
     const num = parseFloat(val);
@@ -68,11 +82,12 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
     }
   };
 
+  // 處理台幣輸入變更
   const handleTwdChange = (val: string) => {
     setLastEdited('twd');
     setCalcTwd(val);
     if (val === '') {
-        setCalcYen('');
+        setCalcYen(''); // 強制清空另一欄，防止殘留
         return;
     }
     const num = parseFloat(val);
@@ -98,17 +113,19 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
     setEditingId(item.id);
     setTitle(item.title);
     
-    // Attempt to reverse calculate unit price in Yen. 
-    const unitPrice = Math.round(item.amountYen / (item.quantity || 1));
-    setAmountInput(unitPrice.toString());
+    // 反推單價 (使用 parseFloat 確保小數點不遺失)
+    const unitPrice = item.amountYen / (item.quantity || 1);
+    // 如果是整數顯示整數，小數則保留2位
+    const displayPrice = Number.isInteger(unitPrice) ? unitPrice.toString() : unitPrice.toFixed(2);
+
+    setAmountInput(displayPrice);
     setQuantityInput(item.quantity || 1);
     setDateInput(item.date);
     setNotesInput(item.notes || '');
     
-    // Switch to JPY for editing simplicity
     setCurrency('JPY');
-    setCalcYen(unitPrice.toString());
-    handleYenChange(unitPrice.toString()); 
+    setCalcYen(displayPrice);
+    handleYenChange(displayPrice); 
     setLastEdited('yen');
 
     setIsAdding(true);
@@ -116,15 +133,23 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
 
   const handleSave = () => {
     if (!amountInput || !title) return;
+
+    // 防呆：如果使用台幣且匯率異常，阻止儲存並提示
+    if (currency === 'TWD' && (!exchangeRate || exchangeRate <= 0)) {
+        alert("無法獲取有效匯率，請檢查網路或改輸入日幣金額。");
+        return;
+    }
     
-    // Close Modal Optimistically
     setIsAdding(false);
 
     let finalAmountYen = 0;
-    const inputVal = parseInt(amountInput);
+    // 修復：使用 parseFloat 支援小數點金額
+    const inputVal = parseFloat(amountInput);
+    if (isNaN(inputVal)) return;
 
+    // 如果輸入的是台幣，先換算回日幣存檔 (系統統一存日幣)
     if (currency === 'TWD') {
-        finalAmountYen = Math.round(inputVal / exchangeRate);
+        finalAmountYen = inputVal / exchangeRate;
     } else {
         finalAmountYen = inputVal;
     }
@@ -133,7 +158,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
 
     const currentData = {
         title,
-        amountYen: finalAmountYen,
+        amountYen: finalAmountYen, // Firestore 支援儲存浮點數
         quantity: quantityInput,
         date: dateInput,
         notes: notesInput
@@ -142,18 +167,16 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
     (async () => {
         try {
             if (editingId) {
-                await updateDoc(doc(db, 'expenses', editingId), { 
-                    ...currentData 
-                });
+                await updateDoc(doc(db, 'expenses', editingId), sanitizeData(currentData));
             } else {
                 const newId = Date.now().toString();
-                await setDoc(doc(db, 'expenses', newId), {
+                await setDoc(doc(db, 'expenses', newId), sanitizeData({
                     id: newId,
                     ...currentData,
                     category: 'other',
                     payer: 'Me',
                     deleted: false
-                });
+                }));
             }
         } catch (err) {
             console.error("Error saving expense:", err);
@@ -179,7 +202,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
     const newQty = Math.max(1, currentQty + delta);
     
     const unitPrice = expense.amountYen / currentQty;
-    const newTotalYen = Math.round(unitPrice * newQty);
+    const newTotalYen = unitPrice * newQty;
 
     try {
         await updateDoc(doc(db, 'expenses', id), { 
@@ -197,7 +220,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight">旅費帳本</h2>
       </div>
 
-      {/* Summary Card with Editable Rate */}
+      {/* 總結卡片 (含可編輯匯率) */}
       <div className="bg-wafu-indigo text-white rounded-2xl p-6 shadow-xl border border-wafu-indigo/50 relative overflow-hidden mb-8">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gold-leaf opacity-10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
             
@@ -208,25 +231,40 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
                         <span>總支出統計</span>
                     </h4>
                     
-                    {/* Editable Rate Setting */}
-                    <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-                        <span className="text-[10px] text-white/60 font-mono">Rate:</span>
-                        {isEditingRate ? (
-                            <input 
-                                autoFocus
-                                type="number"
-                                className="w-12 bg-transparent text-white text-right text-xs font-mono font-bold focus:outline-none"
-                                value={exchangeRate}
-                                step="0.001"
-                                onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)}
-                                onBlur={() => setIsEditingRate(false)}
-                            />
-                        ) : (
-                            <span 
-                                onClick={() => setIsEditingRate(true)}
-                                className="text-xs font-mono font-bold text-white cursor-pointer border-b border-dashed border-white/40 hover:text-wafu-goldLight"
-                            >
-                                {exchangeRate}
+                    {/* 匯率設定：點擊可手動修改 */}
+                    <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+                            <span className="text-[10px] text-white/60 font-mono">Rate:</span>
+                            {isEditingRate ? (
+                                <input 
+                                    autoFocus
+                                    type="number"
+                                    className="w-12 bg-transparent text-white text-right text-xs font-mono font-bold focus:outline-none"
+                                    value={exchangeRate}
+                                    step="0.001"
+                                    onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)}
+                                    onBlur={() => setIsEditingRate(false)}
+                                />
+                            ) : (
+                                <span 
+                                    onClick={() => setIsEditingRate(true)}
+                                    className="text-xs font-mono font-bold text-white cursor-pointer border-b border-dashed border-white/40 hover:text-wafu-goldLight"
+                                >
+                                    {exchangeRate}
+                                </span>
+                            )}
+                            {refreshRate && (
+                                <button 
+                                    onClick={refreshRate}
+                                    className={`ml-1 text-white/60 hover:text-white transition-colors ${isRateLoading ? 'animate-spin' : ''}`}
+                                >
+                                    <Icons.Refresh className="w-3 h-3" />
+                                </button>
+                            )}
+                        </div>
+                        {rateLastUpdated && (
+                            <span className="text-[8px] text-white/40">
+                                Updated: {rateLastUpdated.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </span>
                         )}
                     </div>
@@ -235,7 +273,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
                 <div className="flex flex-col items-end">
                 <div className="text-4xl font-black font-serif tracking-tight flex items-baseline gap-1">
                     <span className="text-xl font-normal opacity-70">¥</span>
-                    <span>{totalYen.toLocaleString()}</span>
+                    <span>{totalYen.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div className="text-base font-bold text-wafu-goldLight mt-1 font-mono tracking-wide">
                     ≈ NT$ {totalTwd.toLocaleString()}
@@ -261,13 +299,12 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
                 </div>
                 
                 <div className="text-right shrink-0">
-                    <div className="font-mono font-bold text-wafu-indigo text-lg">¥{ex.amountYen.toLocaleString()}</div>
+                    <div className="font-mono font-bold text-wafu-indigo text-lg">¥{ex.amountYen.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     <div className="text-xs text-stone-400 mt-0.5 font-medium">≈ NT${Math.round(ex.amountYen * exchangeRate).toLocaleString()}</div>
                 </div>
             </div>
 
             <div className="relative z-10 flex justify-between items-center mt-2 border-t border-stone-100 pt-2">
-               {/* Horizontal Buttons */}
                <div className="flex items-center gap-1 bg-stone-50 p-1 rounded-lg border border-stone-100" onClick={e => e.stopPropagation()}>
                   <button onClick={() => updateExpenseQuantity(ex.id, -1, ex)} className="text-stone-400 hover:text-wafu-indigo active-bounce w-8 h-8 flex items-center justify-center font-bold text-lg bg-white rounded-md shadow-sm border border-stone-100">-</button>
                   <span className="text-sm font-bold text-wafu-indigo font-mono w-8 text-center">{ex.quantity || 1}</span>
@@ -337,33 +374,16 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
       </div>
 
       {isAdding && (
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-20 px-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
-             
-             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo z-20">
-                 <button 
-                    onClick={() => setIsAdding(false)} 
-                    className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2"
-                 >
-                    取消
-                 </button>
-                 <h3 className="text-lg font-bold font-serif text-white tracking-widest">
-                    {editingId ? '編輯支出' : '記帳'}
-                 </h3>
-                 <button 
-                    onClick={handleSave}
-                    disabled={!amountInput || !title} 
-                    className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2"
-                 >
-                    儲存
-                 </button>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
-                <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
+        <Modal
+          isOpen={isAdding}
+          onClose={() => setIsAdding(false)}
+          title={editingId ? '編輯支出' : '記帳'}
+          onConfirm={handleSave}
+          confirmDisabled={!amountInput || !title}
+        >
                 <div className="relative z-10 space-y-6">
                     
-                    {/* Currency Calculator inside Modal - Using Global Rate */}
+                    {/* 內建模態框的匯率計算機 */}
                     <div className="relative overflow-hidden bg-gradient-to-br from-wafu-darkIndigo to-wafu-indigo rounded-2xl p-4 text-white shadow-inner ring-1 ring-wafu-indigo/50">
                         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")` }}></div>
                         <h3 className="text-[10px] text-wafu-goldLight mb-3 font-bold tracking-[0.2em] uppercase flex justify-between">
@@ -423,6 +443,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
                                 onChange={(e) => setAmountInput(e.target.value)}
                                 placeholder={currency === 'JPY' ? '¥ 單價' : 'NT$ 單價'}
                                 className="w-full min-w-0 p-3 pr-14 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:border-wafu-indigo font-mono text-lg font-bold"
+                                step="any" // 允許小數點輸入
                                 />
                                 <button 
                                 onClick={() => setCurrency(currency === 'JPY' ? 'TWD' : 'JPY')}
@@ -432,7 +453,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
                                 </button>
                             </div>
                             
-                            {/* Improved Horizontal Stepper for Quantity */}
+                            {/* 數量步進器 */}
                             <div className="flex items-center bg-stone-50 rounded-xl border border-stone-200 overflow-hidden shrink-0">
                                 <button 
                                   onClick={() => setQuantityInput(Math.max(1, quantityInput - 1))}
@@ -452,7 +473,6 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
                             </div>
                         </div>
 
-                        {/* Notes Field */}
                         <textarea 
                             value={notesInput}
                             onChange={(e) => setNotesInput(e.target.value)}
@@ -461,9 +481,7 @@ export const ExpenseTracker: React.FC<Props> = ({ expenses, currentRate = 0.22 }
                         />
                     </div>
                 </div>
-             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

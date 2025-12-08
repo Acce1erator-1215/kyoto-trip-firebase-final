@@ -1,14 +1,14 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { SightseeingSpot } from '../types';
 import { Icons } from './Icon';
-import { db } from '../firebase';
+import { db, sanitizeData } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { resizeImage } from '../services/imageUtils';
 import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
+import { useImageUpload } from '../hooks/useImageUpload'; // 引入圖片上傳 Hook
 
 interface Props {
   items: SightseeingSpot[];
-  setItems: any; // Legacy
   userLocation?: { lat: number, lng: number } | null;
   onFocus?: (lat: number, lng: number) => void;
 }
@@ -28,7 +28,20 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
     lng: undefined
   });
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 使用 hook 處理圖片邏輯 (含貼上)
+  const { fileInputRef, handleImageUpload, triggerUpload, handlePaste, handleClipboardRead } = useImageUpload();
+
+  // 監聽貼上事件
+  useEffect(() => {
+    if (!isAdding) return;
+
+    const onPaste = (e: ClipboardEvent) => {
+        handlePaste(e, (base64) => setForm(prev => ({ ...prev, imageUrl: base64 })));
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [isAdding, handlePaste]);
 
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
@@ -77,7 +90,8 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
 
     try {
         if (editingId) {
-            const cleanData = JSON.parse(JSON.stringify(finalData));
+            // Strip undefined with sanitizeData
+            const cleanData = sanitizeData(finalData);
             await updateDoc(doc(db, 'sightseeing', editingId), cleanData);
         } else {
             const newId = Date.now().toString();
@@ -91,7 +105,8 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
                 lng,
                 deleted: false
             };
-            const cleanItem = JSON.parse(JSON.stringify(item));
+            // Strip undefined with sanitizeData
+            const cleanItem = sanitizeData(item);
             await setDoc(doc(db, 'sightseeing', newId), cleanItem);
         }
         setIsAdding(false);
@@ -113,19 +128,6 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
 
   const handlePermanentDelete = async (id: string) => {
     await deleteDoc(doc(db, 'sightseeing', id));
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const resizedImage = await resizeImage(file);
-        setForm({ ...form, imageUrl: resizedImage });
-      } catch (error) {
-        console.error("Image upload failed", error);
-        alert("圖片處理失敗，請重試");
-      }
-    }
   };
 
   return (
@@ -217,7 +219,7 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
 
       {isAdding && (
         <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
              <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
                  <button onClick={() => setIsAdding(false)} className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2">取消</button>
                  <h3 className="text-lg font-bold font-serif text-white tracking-widest">{editingId ? '編輯景點' : '新增景點'}</h3>
@@ -229,13 +231,27 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
              <div className="flex-1 overflow-y-auto px-8 py-8 pb-32 relative bg-white">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
                 <div className="relative z-10">
-                    <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 mb-6 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform">
-                        {form.imageUrl ? (
-                            <img src={form.imageUrl} className="w-full h-full object-cover" alt="preview" />
-                        ) : (
-                            <div className="flex flex-col items-center text-stone-400"><Icons.Plus /><span className="text-[10px] mt-1 font-bold">景點照片</span></div>
-                        )}
-                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*,image/heic,image/heif" hidden />
+                    <div className="relative w-full mb-6">
+                        <div onClick={triggerUpload} className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform">
+                            {form.imageUrl ? (
+                                <img src={form.imageUrl} className="w-full h-full object-cover" alt="preview" />
+                            ) : (
+                                <div className="flex flex-col items-center text-stone-400"><Icons.Plus /><span className="text-[10px] mt-1 font-bold">景點照片 (可直接貼上)</span></div>
+                            )}
+                            <input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, (base64) => setForm({...form, imageUrl: base64}))} accept="image/*,image/heic,image/heif" hidden />
+                        </div>
+                        {/* 手機版貼上按鈕 */}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleClipboardRead((base64) => setForm({...form, imageUrl: base64}));
+                            }}
+                            className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm text-wafu-indigo text-[10px] px-2 py-1.5 rounded-lg shadow-sm border border-stone-200 font-bold hover:bg-white active:scale-95 flex items-center gap-1 z-20 transition-all"
+                        >
+                            <span>📋</span>
+                            <span>貼上</span>
+                        </button>
                     </div>
 
                     <div className="space-y-4">

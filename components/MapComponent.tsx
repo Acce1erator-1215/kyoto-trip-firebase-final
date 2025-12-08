@@ -1,48 +1,81 @@
 
 import React, { useEffect, useRef } from 'react';
-import { ItineraryItem, Restaurant, SightseeingSpot } from '../types';
+import { ItineraryItem, Restaurant, SightseeingSpot, Category } from '../types';
 
-// Using Leaflet from global scope (added in index.html)
+// 宣告全域的 L (Leaflet)，因為是透過 index.html 的 script 標籤引入的 (無須 npm install)
 declare const L: any;
 
 interface Props {
-  items: (ItineraryItem | Restaurant | SightseeingSpot)[];
-  userLocation: { lat: number, lng: number } | null;
-  focusedLocation?: { lat: number, lng: number } | null;
+  items: (ItineraryItem | Restaurant | SightseeingSpot)[]; // 要顯示的地點列表
+  userLocation: { lat: number, lng: number } | null;       // 使用者當前位置
+  focusedLocation?: { lat: number, lng: number } | null;   // 指定要聚焦的座標
 }
 
+/**
+ * 地圖組件 (Map Component)
+ * 使用 Leaflet.js 渲染 OpenStreetMap
+ */
 export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLocation }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const userMarkerRef = useRef<any>(null);
-  const itemMarkersRef = useRef<any[]>([]);
-  const hasFittedBounds = useRef(false);
+  const mapInstanceRef = useRef<any>(null); // 保存 Leaflet Map 實例
+  const userMarkerRef = useRef<any>(null);  // 使用者位置的 Marker
+  const itemMarkersRef = useRef<any[]>([]); // 地點 Markers 陣列
+  const hasFittedBounds = useRef(false);    // 記錄是否已執行過自動縮放
 
-  // Default: Kyoto Station
+  // 預設中心點: 京都車站
   const KYOTO_CENTER = { lat: 34.9858, lng: 135.7588 };
 
-  // Initialize Map
+  // 取得標記顏色與圖示樣式
+  const getItemStyle = (item: any): { color: string; typeLabel: string; icon: string } => {
+    // 1. 判斷是否為餐廳 (有 rating 屬性且無 category 屬性)
+    if (item.rating !== undefined && !item.category) {
+        return { color: '#D97706', typeLabel: '美食', icon: '🍴' }; // Amber-600
+    }
+    
+    // 2. 判斷是否為景點清單項目 (無 category 且無 rating)
+    if (!item.category && item.rating === undefined) {
+        return { color: '#183654', typeLabel: '景點', icon: '⛩️' }; // Wafu-Indigo
+    }
+
+    // 3. 行程項目 (有 category)
+    switch (item.category as Category) {
+        case 'food':
+            return { color: '#D97706', typeLabel: '美食', icon: '🍜' }; // Amber-600
+        case 'shopping':
+            return { color: '#2563EB', typeLabel: '購物', icon: '🛍️' }; // Blue-600
+        case 'transport':
+            return { color: '#475569', typeLabel: '交通', icon: '🚅' }; // Slate-600
+        case 'flight':
+            return { color: '#0284C7', typeLabel: '航班', icon: '✈️' }; // Sky-600
+        case 'other':
+            return { color: '#57534E', typeLabel: '其他', icon: '🔖' }; // Stone-600
+        case 'sightseeing':
+        default:
+            return { color: '#183654', typeLabel: '景點', icon: '⛩️' }; // Wafu-Indigo
+    }
+  };
+
+  // 初始化地圖 (僅執行一次)
   useEffect(() => {
     if (!mapContainerRef.current) return;
-    if (mapInstanceRef.current) return; // Already initialized
+    if (mapInstanceRef.current) return; // 避免重複初始化
 
     try {
         const map = L.map(mapContainerRef.current, {
             center: [KYOTO_CENTER.lat, KYOTO_CENTER.lng],
             zoom: 13,
-            zoomControl: false, // Cleaner look
+            zoomControl: false, // 隱藏預設縮放控制項 (另外手動添加以調整位置)
             attributionControl: false,
             dragging: true
-            // Removed tap: true as it causes issues in modern browsers
         });
 
-        // OpenStreetMap Layer (Free) with cache busting
+        // 使用 CartoDB 的 Light 風格圖層 (免費且美觀，適合簡約設計)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?v=2', {
             maxZoom: 19,
             subdomains: 'abcd',
         }).addTo(map);
 
-        // Add Zoom control to bottom right to not obstruct header
+        // 將縮放控制項移至右下角，避免遮擋頂部 Header
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         mapInstanceRef.current = map;
@@ -50,6 +83,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         console.error("Leaflet init error:", e);
     }
 
+    // 清理函式：組件卸載時銷毀地圖實例
     return () => {
         if (mapInstanceRef.current) {
             mapInstanceRef.current.remove();
@@ -58,34 +92,58 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     };
   }, []);
 
-  // Update Itinerary Markers
+  // 修復地圖渲染問題：
+  // 當 Tab 切換或地圖顯示時，容器可能正在進行動畫 (fade-in/slide)，導致地圖大小計算錯誤 (灰色區塊)。
+  // 使用 setTimeout 延遲呼叫 invalidateSize() 以確保容器大小已穩定。
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (map) {
+        const timer = setTimeout(() => {
+            map.invalidateSize();
+        }, 200); // 200ms 延遲，配合 CSS transition 時間
+        return () => clearTimeout(timer);
+    }
+  });
+
+  // 當 items 更新時，重新繪製地點標記 (Markers)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Clear existing markers
+    // 清除舊標記
     itemMarkersRef.current.forEach(m => m.remove());
     itemMarkersRef.current = [];
 
-    // bounds to fit
+    // 計算邊界以自動縮放 (Fit Bounds)
     const bounds = L.latLngBounds([]);
 
-    // Filter items: MUST have lat, lng, AND mapsUrl
+    // 過濾出有效的地點 (必須有座標和 Google Maps 連結)
     const validItems = items.filter(item => item.lat && item.lng && item.mapsUrl);
 
     validItems.forEach((item, index) => {
         const lat = item.lat!;
         const lng = item.lng!;
         
-        // Determine name (Itinerary has location, others have name)
+        // 判斷標題 (Itinerary 用 location, 其他用 name)
         const title = (item as any).location || (item as any).name || '地點';
+        
+        // 取得該類別的顏色與圖示
+        const style = getItemStyle(item);
+        
+        // 判斷顯示內容：
+        // 如果是行程項目 (有 day 屬性)，顯示「數字序號」以便對照時間順序
+        // 如果是口袋名單 (餐廳/景點)，顯示「圖示」以便直觀識別類別
+        const isItinerary = (item as any).day !== undefined;
+        const content = isItinerary ? (index + 1).toString() : style.icon;
+        const fontSize = isItinerary ? '12px' : '14px';
 
-        // Custom Icon
+        // 自訂標記樣式 (水滴狀 + 內容)
+        // 使用 L.divIcon 允許我們用 HTML/CSS 自定義 Marker 外觀
         const markerIcon = L.divIcon({
             className: 'custom-map-marker',
             html: `
               <div style="
-                background-color: #183654; 
+                background-color: ${style.color}; 
                 color: white; 
                 width: 28px; 
                 height: 28px; 
@@ -96,12 +154,13 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
                 justify-content: center; 
                 box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
                 border: 2px solid white;
+                position: relative;
               ">
-                <span style="transform: rotate(45deg); font-weight: bold; font-family: 'Shippori Mincho'; font-size: 12px;">${index + 1}</span>
+                <span style="transform: rotate(45deg); font-weight: bold; font-family: 'Shippori Mincho'; font-size: ${fontSize}; line-height: 1;">${content}</span>
               </div>
             `,
             iconSize: [28, 28],
-            iconAnchor: [14, 28],
+            iconAnchor: [14, 28], // 錨點設為水滴尖端
             popupAnchor: [0, -28]
         });
 
@@ -109,7 +168,10 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
             .addTo(map)
             .bindPopup(`
                 <div style="font-family: 'Noto Sans JP'; min-width: 150px;">
-                    <div style="font-weight: bold; color: #183654; margin-bottom: 4px;">${title}</div>
+                    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                        <span style="background-color: ${style.color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">${style.typeLabel}</span>
+                    </div>
+                    <div style="font-weight: bold; color: #183654; margin-bottom: 4px; font-size: 14px;">${title}</div>
                     ${item.mapsUrl ? `<a href="${item.mapsUrl}" target="_blank" style="display: inline-block; background: #183654; color: white; text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 10px;">Google Maps</a>` : ''}
                 </div>
             `);
@@ -122,8 +184,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         bounds.extend([userLocation.lat, userLocation.lng]);
     }
 
-    // Only auto-fit if we are NOT focusing on a specific location
-    // AND we haven't fitted bounds yet (to avoid jumping on data updates)
+    // 自動縮放邏輯：僅在尚未手動聚焦且尚未執行過自動縮放時觸發
     if (!focusedLocation && !hasFittedBounds.current) {
         if (itemMarkersRef.current.length > 0 || userLocation) {
             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
@@ -131,28 +192,25 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         }
     }
 
-  }, [items, userLocation]); // Re-run when items change
+  }, [items, userLocation]);
 
-  // Handle Focus Effect
+  // 處理聚焦特效 (當使用者點擊列表中的地點時)
   useEffect(() => {
       const map = mapInstanceRef.current;
       if (!map || !focusedLocation) return;
 
       map.flyTo([focusedLocation.lat, focusedLocation.lng], 16, {
           animate: true,
-          duration: 1.5
+          duration: 1.5 // 平滑飛行時間
       });
-      // Allow auto-fit to happen again if user navigates away and comes back?
-      // Or keep it locked. Usually flyTo is a manual action, so we respect it.
 
   }, [focusedLocation]);
 
-  // Update User Location Marker
+  // 更新使用者位置標記 (藍點 + 脈衝動畫)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !userLocation) return;
     
-    // User Location Icon (Blue Dot)
     const userIcon = L.divIcon({
         className: 'user-location-marker',
         html: `
@@ -184,7 +242,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     }
   }, [userLocation]);
 
-  // Stop propagation to prevent parent draggable scroll from interfering
+  // 阻止事件冒泡：防止在地圖上操作時觸發父層的拖曳捲動
   const stopPropagation = (e: React.SyntheticEvent | React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
   };
@@ -195,11 +253,9 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         ref={mapContainerRef} 
         className="w-full h-full z-0 relative"
         style={{background: '#f5f5f5'}} 
-        // Intercept events to prevent parent drag logic
-        // Only blocking START events is enough to prevent parent drag
+        // 攔截滑鼠和觸控事件
         onMouseDown={stopPropagation}
         onTouchStart={stopPropagation}
-        // Removed Move/Wheel blocks to allow Leaflet to handle drag/zoom
       />
     </>
   );

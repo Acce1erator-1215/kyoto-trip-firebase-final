@@ -1,25 +1,30 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingItem, Expense } from '../types';
 import { Icons } from './Icon';
-import { db } from '../firebase';
+import { db, sanitizeData } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
-import { resizeImage } from '../services/imageUtils';
+import { useImageUpload } from '../hooks/useImageUpload'; // 引入圖片上傳 Hook
 
 interface Props {
   items: ShoppingItem[];
-  setItems: any; // Legacy
   expenses: Expense[];
-  setExpenses: any; // Legacy
   currentRate?: number;
 }
 
+/**
+ * 伴手禮/購物清單組件
+ * 特點：
+ * 1. 購買後 (Checked) 自動產生一筆對應的「支出紀錄」
+ * 2. 支援口味篩選 (甜/鹹)
+ * 3. 即時台幣換算顯示
+ */
 export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0.22 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Multi-select state
+  // 多選篩選狀態 (口味)
   const [activeFlavorFilters, setActiveFlavorFilters] = useState<('sweet' | 'salty')[]>([]);
 
   const [newItem, setNewItem] = useState<Partial<ShoppingItem>>({
@@ -31,13 +36,26 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     flavor: undefined
   });
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 使用 hook 處理圖片邏輯 (含貼上)
+  const { fileInputRef, handleImageUpload, triggerUpload, handlePaste, handleClipboardRead } = useImageUpload();
   const exchangeRate = currentRate;
+
+  // 監聽貼上事件
+  useEffect(() => {
+    if (!isAdding) return;
+
+    const onPaste = (e: ClipboardEvent) => {
+        handlePaste(e, (base64) => setNewItem(prev => ({ ...prev, imageUrl: base64 })));
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [isAdding, handlePaste]);
 
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
   
-  // Filter Logic: If filter array is empty, show all. Else show matches.
+  // 篩選邏輯：若無篩選條件則顯示全部，否則顯示符合任一口味者
   const filteredItems = activeItems.filter(item => {
       if (activeFlavorFilters.length === 0) return true;
       return item.flavor && activeFlavorFilters.includes(item.flavor);
@@ -70,24 +88,23 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
   const handleSave = () => {
     if (!newItem.name) return;
     
-    // Optimistic UI: Close immediately
+    // 樂觀 UI
     setIsAdding(false);
     
     (async () => {
         try {
             if (editingId) {
-                // Strip undefined
-                const cleanData = JSON.parse(JSON.stringify(newItem));
+                const cleanData = sanitizeData(newItem);
                 await updateDoc(doc(db, 'shopping', editingId), cleanData);
                 
-                // If bought, update the linked expense as well
+                // 邏輯：如果該項目已購買且有關聯的支出，需同步更新支出金額
                 if (newItem.bought && newItem.linkedExpenseId) {
                     const totalYen = (newItem.priceYen || 0) * (newItem.quantity || 1);
                     await updateDoc(doc(db, 'expenses', newItem.linkedExpenseId), {
                         title: newItem.name,
                         amountYen: totalYen,
                         quantity: newItem.quantity
-                    }).catch(e => console.log("Linked expense not found or error", e));
+                    }).catch(e => console.log("關聯支出未找到或更新失敗", e));
                 }
             } else {
                 const newId = Date.now().toString();
@@ -102,11 +119,10 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                     flavor: newItem.flavor,
                     deleted: false
                 };
-                // Strip undefined
-                const cleanItem = JSON.parse(JSON.stringify(itemData));
+                const cleanItem = sanitizeData(itemData);
                 await setDoc(doc(db, 'shopping', newId), cleanItem);
             }
-            // Reset form
+            // 重置表單
             setNewItem({ name: '', description: '', priceYen: 0, imageUrl: '', quantity: 1, flavor: undefined });
         } catch (err) {
             console.error("Error saving shopping item:", err);
@@ -115,14 +131,15 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     })();
   };
 
+  // 切換購買狀態 (同步新增/刪除支出紀錄)
   const toggleBought = async (id: string, currentItem: ShoppingItem) => {
     const newBoughtState = !currentItem.bought;
     let newLinkedId = currentItem.linkedExpenseId;
 
     try {
-        // Sync with Expenses
+        // 同步支出邏輯
         if (newBoughtState) {
-          // Add to Expenses Collection
+          // 若標記為已買，則自動在 expenses 集合新增一筆支出
           const totalYen = (currentItem.priceYen || 0) * (currentItem.quantity || 1);
           const expenseId = Date.now().toString();
           
@@ -138,17 +155,17 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
           });
           newLinkedId = expenseId;
         } else {
-          // Remove from Expenses Collection
+          // 若取消購買，則刪除對應的支出紀錄
           if (currentItem.linkedExpenseId) {
             await deleteDoc(doc(db, 'expenses', currentItem.linkedExpenseId));
           }
-          newLinkedId = undefined; // Actually null/undefined in DB
+          newLinkedId = undefined; // Firestore 中會變成 null
         }
 
-        // Update Shopping Item
+        // 更新購物項目狀態
         await updateDoc(doc(db, 'shopping', id), { 
             bought: newBoughtState, 
-            linkedExpenseId: newLinkedId || null // Firestore doesn't like undefined
+            linkedExpenseId: newLinkedId || null
         });
 
     } catch (err) {
@@ -156,13 +173,12 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     }
   };
 
+  // 刪除邏輯 (如果有關聯支出也會一併刪除)
   const handleDelete = async (id: string, item: ShoppingItem, e: React.MouseEvent) => {
       e.stopPropagation();
       try {
-        // Soft delete shopping item
         await updateDoc(doc(db, 'shopping', id), { deleted: true });
 
-        // If it was linked to an expense, we should probably delete the expense too?
         if (item.linkedExpenseId) {
              await deleteDoc(doc(db, 'expenses', item.linkedExpenseId));
         }
@@ -179,6 +195,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
       await deleteDoc(doc(db, 'shopping', id));
   };
 
+  // 更新數量 (同步計算總價)
   const updateQuantity = async (id: string, delta: number, currentItem: ShoppingItem) => {
     const currentQty = currentItem.quantity || 1;
     const newQty = Math.max(1, currentQty + delta);
@@ -186,7 +203,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     try {
         await updateDoc(doc(db, 'shopping', id), { quantity: newQty });
 
-        // If bought, update linked expense
+        // 如果已買，同步更新支出金額
         if (currentItem.bought && currentItem.linkedExpenseId) {
             const newTotalYen = (currentItem.priceYen || 0) * newQty;
             await updateDoc(doc(db, 'expenses', currentItem.linkedExpenseId), {
@@ -199,26 +216,13 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const resizedImage = await resizeImage(file);
-        setNewItem({ ...newItem, imageUrl: resizedImage });
-      } catch (error) {
-        console.error("Image processing failed", error);
-        alert("圖片處理失敗，請重試");
-      }
-    }
-  };
-
   return (
     <div className="pb-40 px-4">
       <div className="mb-4 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">伴手禮</h2>
       </div>
 
-      {/* Filter Tabs - Updated to Multi-select */}
+      {/* 多選篩選 Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
           <button 
             onClick={clearFlavorFilters}
@@ -250,7 +254,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
             <div key={item.id} className="bg-white rounded-2xl shadow-washi border border-stone-100 overflow-hidden group flex flex-col relative transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] animate-zoom-in">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none z-10 mix-blend-multiply"></div>
 
-                {/* Reduced Height Image Area */}
+                {/* 圖片區域 (點擊編輯) */}
                 <div className="h-28 bg-stone-100 relative overflow-hidden cursor-pointer" onClick={() => openEdit(item)}>
                     <img src={item.imageUrl} alt={item.name} className={`w-full h-full object-cover transition-all duration-500 ${item.bought ? 'grayscale opacity-50' : 'group-hover:scale-110'}`} />
                     <button 
@@ -293,7 +297,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                             </div>
                         </div>
                         
-                        {/* Quantity Controls */}
+                        {/* 數量控制 */}
                         <div className="flex items-center bg-stone-50 rounded-lg border border-stone-100 h-6">
                              <button 
                                 onClick={() => updateQuantity(item.id, -1, item)}
@@ -360,11 +364,10 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
       )}
 
       {isAdding && (
-        // Positioned at top-start for upper-half appearance
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-20 px-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
              
-             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo z-20">
+             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
                  <button 
                     onClick={() => setIsAdding(false)} 
                     className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2"
@@ -386,25 +389,39 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
              <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
                 <div className="relative z-10">
-                    <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full h-32 mb-6 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform"
-                    >
-                        {newItem.imageUrl ? (
-                            <img src={newItem.imageUrl} className="w-full h-full object-cover" alt="preview" />
-                        ) : (
-                            <div className="flex flex-col items-center text-stone-400">
-                                <Icons.Plus />
-                                <span className="text-[10px] mt-1 font-bold">商品照片</span>
-                            </div>
-                        )}
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleImageUpload} 
-                            accept="image/*,image/heic,image/heif" 
-                            hidden 
-                        />
+                    <div className="relative w-full mb-6">
+                        <div 
+                            onClick={triggerUpload}
+                            className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform"
+                        >
+                            {newItem.imageUrl ? (
+                                <img src={newItem.imageUrl} className="w-full h-full object-cover" alt="preview" />
+                            ) : (
+                                <div className="flex flex-col items-center text-stone-400">
+                                    <Icons.Plus />
+                                    <span className="text-[10px] mt-1 font-bold">商品照片 (可直接貼上)</span>
+                                </div>
+                            )}
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={(e) => handleImageUpload(e, (base64) => setNewItem({...newItem, imageUrl: base64}))} 
+                                accept="image/*,image/heic,image/heif" 
+                                hidden 
+                            />
+                        </div>
+                        {/* 手機版貼上按鈕 */}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleClipboardRead((base64) => setNewItem({...newItem, imageUrl: base64}));
+                            }}
+                            className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm text-wafu-indigo text-[10px] px-2 py-1.5 rounded-lg shadow-sm border border-stone-200 font-bold hover:bg-white active:scale-95 flex items-center gap-1 z-20 transition-all"
+                        >
+                            <span>📋</span>
+                            <span>貼上</span>
+                        </button>
                     </div>
 
                     <div className="space-y-5">
@@ -415,7 +432,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                           onChange={e => setNewItem({...newItem, name: e.target.value})}
                         />
 
-                        {/* Flavor Tags Selection */}
+                        {/* 口味選擇 */}
                         <div className="flex gap-4">
                             <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
                                 ${newItem.flavor === 'sweet' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>

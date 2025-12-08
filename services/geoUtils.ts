@@ -1,11 +1,17 @@
 
 /**
- * Calculates the distance between two coordinates in meters.
- * Uses the Haversine formula.
+ * 計算兩個座標點之間的直線距離 (單位：公尺)
+ * 使用 Haversine formula (半正矢公式)，適用於地球球面距離計算
+ * 
+ * @param lat1 起點緯度
+ * @param lon1 起點經度
+ * @param lat2 終點緯度
+ * @param lon2 終點經度
+ * @returns 距離 (公尺)
  */
 export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI/180; // φ, λ in radians
+    const R = 6371e3; // 地球平均半徑 (公尺)
+    const φ1 = lat1 * Math.PI/180; // 角度轉弧度
     const φ2 = lat2 * Math.PI/180;
     const Δφ = (lat2-lat1) * Math.PI/180;
     const Δλ = (lon2-lon1) * Math.PI/180;
@@ -15,11 +21,12 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
               Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   
-    return R * c; // in metres
+    return R * c; 
   };
   
   /**
-   * Formats a distance in meters to a human-readable string (m or km).
+   * 將距離數值格式化為易讀字串
+   * 小於 1000m 顯示 "XXm"，大於等於 1000m 顯示 "X.Xkm"
    */
   export const formatDistance = (meters: number): string => {
     if (meters < 1000) {
@@ -29,17 +36,18 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
   };
   
   /**
-   * Attempts to extract latitude and longitude from a Google Maps URL.
-   * Priority 1: !3d / !4d parameters (Exact marker location)
-   * Priority 2: @lat,lng parameters (Viewport center)
-   * Priority 3: q=lat,lng query parameters
+   * 從 Google Maps URL 解析經緯度座標
+   * 支援多種 URL 格式：
+   * 1. 包含 !3d... !4d... (最精確，通常是分享地點時的格式)
+   * 2. 包含 @lat,lng (通常是視口中心)
+   * 3. 包含 q=lat,lng (搜尋參數)
    */
   export const parseCoordinatesFromUrl = (url: string): { lat: number, lng: number } | null => {
     try {
       if (!url) return null;
       
-      // Priority 1: Data parameters !3d and !4d (Exact marker location)
-      // Example: ...!3d34.9997865!4d135.7601172...
+      // 優先級 1: 資料參數 !3d 和 !4d (這是分享特定地點時最準確的座標)
+      // 範例: ...!3d34.9997865!4d135.7601172...
       const dataLatMatch = url.match(/!3d(-?\d+(\.\d+)?)/);
       const dataLngMatch = url.match(/!4d(-?\d+(\.\d+)?)/);
 
@@ -50,8 +58,8 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
         };
       }
 
-      // Priority 2: Viewport parameters @lat,lng
-      // Note: This is often the center of the screen, not necessarily the pin
+      // 優先級 2: 視口參數 @lat,lng
+      // 注意：這通常是螢幕中心點，不一定是圖釘位置，但在沒有 !3d 參數時可用作備案
       const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
       const match = url.match(regex);
       
@@ -62,7 +70,7 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
         };
       }
       
-      // Priority 3: Query param q=lat,lng (sometimes used for search results)
+      // 優先級 3: 查詢參數 q=lat,lng (舊版搜尋連結)
       const qRegex = /q=(-?\d+\.\d+),(-?\d+\.\d+)/;
       const qMatch = url.match(qRegex);
       if (qMatch && qMatch.length >= 3) {
@@ -74,21 +82,22 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
   
       return null;
     } catch (e) {
-      console.warn("Failed to parse coordinates from URL", e);
+      console.warn("解析 Google Maps URL 失敗", e);
       return null;
     }
   };
 
   /**
-   * Fallback: Search for location by name using OpenStreetMap (Nominatim) API.
-   * This is used when the Google Maps URL doesn't contain coordinates (short links).
+   * 使用 OpenStreetMap (Nominatim API) 依名稱搜尋地點座標
+   * 用途：當使用者只輸入地點名稱但沒有提供 Maps URL 時，自動補全座標
+   * 
+   * @param query 地點名稱關鍵字
    */
   export const searchLocationByName = async (query: string): Promise<{ lat: number, lng: number } | null> => {
       if (!query) return null;
       try {
-          // Append 'Kyoto' to context, assuming the trip is in Kyoto/Japan to improve accuracy
-          // However, if the user types a full address, we use it as is.
-          const searchQuery = query.includes('日本') || query.includes('Japan') || query.includes('Kyoto') || query.includes('京都') 
+          // 優化搜尋：若關鍵字未包含日本/京都，自動加上後綴以提高準確度
+          const searchQuery = query.includes('日本') || query.includes('Japan') || query.includes('Kyoto') || query.includes('京都') || query.includes('大阪')|| query.includes('神戶')
               ? query 
               : `${query} Kyoto Japan`;
           

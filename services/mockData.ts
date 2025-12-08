@@ -1,5 +1,5 @@
 
-import { ItineraryItem, Expense, ShoppingItem, Restaurant, SightseeingSpot } from '../types';
+import { ItineraryItem } from '../types';
 
 export const INITIAL_ITINERARY: ItineraryItem[] = [
   // Day 0: Todo
@@ -59,13 +59,4 @@ export const INITIAL_ITINERARY: ItineraryItem[] = [
   { id: 'd8-1', day: 8, time: '10:00', location: '移動: 京都 => 大阪', category: 'transport', notes: '移動至機場', completed: false },
   { id: 'd8-2', day: 8, time: '14:00', location: 'KIX 關西機場', category: 'flight', notes: '出發返程', completed: false, lat: 34.4320, lng: 135.2304 },
   { id: 'd8-3', day: 8, time: '15:00', location: '星宇餐點', category: 'food', notes: '機上餐', completed: false },
-];
-
-export const INITIAL_EXPENSES: Expense[] = [];
-export const INITIAL_SHOPPING: ShoppingItem[] = [];
-export const INITIAL_RESTAURANTS: Restaurant[] = [
-    { id: 'r1', name: '星巴克 京都二寧坂ヤサカ茶屋店', description: '塌塌米座位，很有特色', rating: 4.5, lat: 35.0007, lng: 135.7806, mapsUrl: 'https://maps.app.goo.gl/example', tags: ['咖啡', '甜點'], deleted: false },
-];
-export const INITIAL_SIGHTSEEING: SightseeingSpot[] = [
-    { id: 's1', name: '伏見稻荷大社', description: '千本鳥居', lat: 34.9671, lng: 135.7727, mapsUrl: 'https://maps.app.goo.gl/fushimi', deleted: false }
 ];

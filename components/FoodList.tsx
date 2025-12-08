@@ -1,14 +1,15 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Restaurant } from '../types';
 import { Icons } from './Icon';
-import { db } from '../firebase';
+import { db, sanitizeData } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { resizeImage } from '../services/imageUtils';
 import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
+import { useDraggableScroll } from '../hooks/useDraggableScroll'; // 引入 Hook
+import { useImageUpload } from '../hooks/useImageUpload'; // 引入圖片上傳 Hook
 
 interface Props {
   items: Restaurant[];
-  setItems: any; // Legacy
   userLocation?: { lat: number, lng: number } | null;
   onFocus?: (lat: number, lng: number) => void;
 }
@@ -23,7 +24,6 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
   
   // Multi-select state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
-  
   const [customTagInput, setCustomTagInput] = useState('');
   
   const [form, setForm] = useState<Partial<Restaurant>>({
@@ -37,51 +37,31 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
     lng: undefined
   });
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 使用 hook 處理圖片邏輯 (含貼上)
+  const { fileInputRef, handleImageUpload, triggerUpload, handlePaste, handleClipboardRead } = useImageUpload();
 
-  // Drag Scroll Logic
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isDown = useRef(false);
-  const startX = useRef(0);
-  const scrollLeftStart = useRef(0);
-  const isDrag = useRef(false);
+  // 監聽貼上事件
+  useEffect(() => {
+    if (!isAdding) return;
 
-  const onMouseDown = (e: React.MouseEvent) => {
-    isDown.current = true;
-    isDrag.current = false;
-    if (scrollRef.current) {
-      startX.current = e.pageX - scrollRef.current.offsetLeft;
-      scrollLeftStart.current = scrollRef.current.scrollLeft;
-    }
-  };
-  
-  const onMouseLeave = () => {
-    isDown.current = false;
-  };
-  
-  const onMouseUp = () => {
-    isDown.current = false;
-  };
-  
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDown.current || !scrollRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX.current) * 2;
-    scrollRef.current.scrollLeft = scrollLeftStart.current - walk;
-    if (Math.abs(x - startX.current) > 5) isDrag.current = true;
-  };
+    const onPaste = (e: ClipboardEvent) => {
+        handlePaste(e, (base64) => setForm(prev => ({ ...prev, imageUrl: base64 })));
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [isAdding, handlePaste]);
+
+  // 重構：使用 useDraggableScroll Hook 替代原本手寫的邏輯
+  const scrollLogic = useDraggableScroll({ direction: 'horizontal' });
 
   const handleTagClick = (tag: string) => {
-      if (!isDrag.current) {
-          toggleFilter(tag);
-      }
+      // 使用 hook 提供的 onEntryClick 確保拖曳時不會觸發點擊
+      scrollLogic.onEntryClick(() => toggleFilter(tag));
   };
 
   const handleClearClick = () => {
-      if (!isDrag.current) {
-          clearFilters();
-      }
+      scrollLogic.onEntryClick(() => clearFilters());
   };
 
   const allUsedTags = Array.from(new Set([
@@ -92,8 +72,6 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
 
-  // Filter logic: Show items that have AT LEAST ONE of the selected tags (OR logic)
-  // If no tags selected, show all
   const filteredItems = activeTagFilters.length === 0 
     ? activeItems 
     : activeItems.filter(i => i.tags?.some(tag => activeTagFilters.includes(tag)));
@@ -156,7 +134,7 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
 
     try {
         if (editingId) {
-            const cleanData = JSON.parse(JSON.stringify(finalData));
+            const cleanData = sanitizeData(finalData);
             await updateDoc(doc(db, 'restaurants', editingId), cleanData);
         } else {
             const newId = Date.now().toString();
@@ -165,14 +143,14 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
                 name: form.name,
                 description: form.description || '',
                 rating: form.rating || 3.0,
-                imageUrl: form.imageUrl || '', // No auto image
+                imageUrl: form.imageUrl || '', 
                 mapsUrl: form.mapsUrl || '',
                 tags: form.tags || [],
                 lat,
                 lng,
                 deleted: false
             };
-            const cleanItem = JSON.parse(JSON.stringify(item));
+            const cleanItem = sanitizeData(item);
             await setDoc(doc(db, 'restaurants', newId), cleanItem);
         }
         setIsAdding(false);
@@ -194,19 +172,6 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
 
   const handlePermanentDelete = async (id: string) => {
     await deleteDoc(doc(db, 'restaurants', id));
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const resizedImage = await resizeImage(file);
-        setForm({ ...form, imageUrl: resizedImage });
-      } catch (error) {
-        console.error("Image upload failed", error);
-        alert("圖片處理失敗，請重試");
-      }
-    }
   };
 
   const toggleTag = (tag: string) => {
@@ -232,12 +197,9 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
       </div>
 
       <div 
-        ref={scrollRef}
-        onMouseDown={onMouseDown}
-        onMouseLeave={onMouseLeave}
-        onMouseUp={onMouseUp}
-        onMouseMove={onMouseMove}
-        className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1 cursor-grab active:cursor-grabbing touch-pan-x"
+        ref={scrollLogic.ref}
+        {...scrollLogic.events}
+        className={`flex gap-2 mb-6 overflow-x-auto pb-1 ${scrollLogic.className}`}
       >
          <button 
             onClick={handleClearClick} 
@@ -344,8 +306,8 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
       </div>
 
       {isAdding && (
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-20 px-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
              <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo z-20">
                  <button onClick={() => setIsAdding(false)} className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2">取消</button>
                  <h3 className="text-lg font-bold font-serif text-white tracking-widest">{editingId ? '編輯餐廳' : '新增餐廳'}</h3>
@@ -357,13 +319,28 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
              <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
                 <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
                 <div className="relative z-10">
-                    <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 mb-6 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform">
-                        {form.imageUrl ? (
-                            <img src={form.imageUrl} className="w-full h-full object-cover" alt="preview" />
-                        ) : (
-                            <div className="flex flex-col items-center text-stone-400"><Icons.Plus /><span className="text-[10px] mt-1 font-bold">餐廳照片</span></div>
-                        )}
-                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*,image/heic,image/heif" hidden />
+                    {/* 圖片上傳區 */}
+                    <div className="relative w-full mb-6">
+                        <div onClick={triggerUpload} className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform">
+                            {form.imageUrl ? (
+                                <img src={form.imageUrl} className="w-full h-full object-cover" alt="preview" />
+                            ) : (
+                                <div className="flex flex-col items-center text-stone-400"><Icons.Plus /><span className="text-[10px] mt-1 font-bold">餐廳照片 (可直接貼上)</span></div>
+                            )}
+                            <input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, (base64) => setForm({...form, imageUrl: base64}))} accept="image/*,image/heic,image/heif" hidden />
+                        </div>
+                         {/* 手機版貼上按鈕 */}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleClipboardRead((base64) => setForm({...form, imageUrl: base64}));
+                            }}
+                            className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm text-wafu-indigo text-[10px] px-2 py-1.5 rounded-lg shadow-sm border border-stone-200 font-bold hover:bg-white active:scale-95 flex items-center gap-1 z-20 transition-all"
+                        >
+                            <span>📋</span>
+                            <span>貼上</span>
+                        </button>
                     </div>
 
                     <div className="space-y-6">
