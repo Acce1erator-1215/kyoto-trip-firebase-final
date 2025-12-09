@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { ShoppingItem, Expense } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-import { doc, setDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useImageUpload } from '../hooks/useImageUpload'; // 引入圖片上傳 Hook
+import { Modal } from './common/Modal';
 
 interface Props {
   items: ShoppingItem[];
@@ -104,7 +104,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                         title: newItem.name,
                         amountYen: totalYen,
                         quantity: newItem.quantity
-                    }).catch(e => console.log("關聯支出未找到或更新失敗", e));
+                    }).catch(e => console.error("關聯支出未找到或更新失敗", e));
                 }
             } else {
                 const newId = Date.now().toString();
@@ -131,19 +131,22 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     })();
   };
 
-  // 切換購買狀態 (同步新增/刪除支出紀錄)
+  // 切換購買狀態 (使用 writeBatch 確保原子性：Shopping 狀態更新 + Expense 新增/刪除)
   const toggleBought = async (id: string, currentItem: ShoppingItem) => {
     const newBoughtState = !currentItem.bought;
     let newLinkedId = currentItem.linkedExpenseId;
 
     try {
+        const batch = writeBatch(db);
+
         // 同步支出邏輯
         if (newBoughtState) {
           // 若標記為已買，則自動在 expenses 集合新增一筆支出
           const totalYen = (currentItem.priceYen || 0) * (currentItem.quantity || 1);
           const expenseId = Date.now().toString();
+          const expenseRef = doc(db, 'expenses', expenseId);
           
-          await setDoc(doc(db, 'expenses', expenseId), {
+          batch.set(expenseRef, {
             id: expenseId,
             title: `${currentItem.name}`,
             amountYen: totalYen,
@@ -157,19 +160,23 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
         } else {
           // 若取消購買，則刪除對應的支出紀錄
           if (currentItem.linkedExpenseId) {
-            await deleteDoc(doc(db, 'expenses', currentItem.linkedExpenseId));
+            const expenseRef = doc(db, 'expenses', currentItem.linkedExpenseId);
+            batch.delete(expenseRef);
           }
-          newLinkedId = undefined; // Firestore 中會變成 null
+          newLinkedId = null; // Firestore null
         }
 
         // 更新購物項目狀態
-        await updateDoc(doc(db, 'shopping', id), { 
+        const shoppingRef = doc(db, 'shopping', id);
+        batch.update(shoppingRef, { 
             bought: newBoughtState, 
-            linkedExpenseId: newLinkedId || null
+            linkedExpenseId: newLinkedId
         });
 
+        await batch.commit();
+
     } catch (err) {
-        console.error("Error toggling bought state:", err);
+        console.error("Error toggling bought state with batch:", err);
     }
   };
 
@@ -363,135 +370,112 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
           </div>
       )}
 
-      {isAdding && (
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
-             
-             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
-                 <button 
-                    onClick={() => setIsAdding(false)} 
-                    className="text-white/80 font-bold text-base hover:text-white transition-colors active-bounce px-2"
-                 >
-                    取消
-                 </button>
-                 <h3 className="text-lg font-bold font-serif text-white tracking-widest">
-                    {editingId ? '編輯項目' : '新增伴手禮'}
-                 </h3>
-                 <button 
-                    onClick={handleSave}
-                    disabled={!newItem.name} 
-                    className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2"
-                 >
-                    儲存
-                 </button>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto px-6 py-6 pb-10 relative bg-white">
-                <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
-                <div className="relative z-10">
-                    <div className="relative w-full mb-6">
-                        <div 
-                            onClick={triggerUpload}
-                            className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform"
-                        >
-                            {newItem.imageUrl ? (
-                                <img src={newItem.imageUrl} className="w-full h-full object-cover" alt="preview" />
-                            ) : (
-                                <div className="flex flex-col items-center text-stone-400">
-                                    <Icons.Plus />
-                                    <span className="text-[10px] mt-1 font-bold">商品照片 (可直接貼上)</span>
-                                </div>
-                            )}
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                onChange={(e) => handleImageUpload(e, (base64) => setNewItem({...newItem, imageUrl: base64}))} 
-                                accept="image/*,image/heic,image/heif" 
-                                hidden 
-                            />
-                        </div>
-                        {/* 手機版貼上按鈕 */}
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleClipboardRead((base64) => setNewItem({...newItem, imageUrl: base64}));
-                            }}
-                            className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm text-wafu-indigo text-[10px] px-2 py-1.5 rounded-lg shadow-sm border border-stone-200 font-bold hover:bg-white active:scale-95 flex items-center gap-1 z-20 transition-all"
-                        >
-                            <span>📋</span>
-                            <span>貼上</span>
-                        </button>
+      <Modal
+        isOpen={isAdding}
+        onClose={() => setIsAdding(false)}
+        title={editingId ? '編輯項目' : '新增伴手禮'}
+        onConfirm={handleSave}
+        confirmDisabled={!newItem.name}
+      >
+        <div className="relative w-full mb-6">
+            <div 
+                onClick={triggerUpload}
+                className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform"
+            >
+                {newItem.imageUrl ? (
+                    <img src={newItem.imageUrl} className="w-full h-full object-cover" alt="preview" />
+                ) : (
+                    <div className="flex flex-col items-center text-stone-400">
+                        <Icons.Plus />
+                        <span className="text-[10px] mt-1 font-bold">商品照片 (可直接貼上)</span>
                     </div>
-
-                    <div className="space-y-5">
-                        <input 
-                          className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-bold font-serif" 
-                          placeholder="商品名稱"
-                          value={newItem.name}
-                          onChange={e => setNewItem({...newItem, name: e.target.value})}
-                        />
-
-                        {/* 口味選擇 */}
-                        <div className="flex gap-4">
-                            <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
-                                ${newItem.flavor === 'sweet' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
-                                <input 
-                                    type="radio" 
-                                    name="flavor" 
-                                    className="hidden" 
-                                    checked={newItem.flavor === 'sweet'} 
-                                    onChange={() => setNewItem({...newItem, flavor: 'sweet'})} 
-                                />
-                                <span className="text-sm font-bold">甜食 🍰</span>
-                            </label>
-                            <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
-                                ${newItem.flavor === 'salty' ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
-                                <input 
-                                    type="radio" 
-                                    name="flavor" 
-                                    className="hidden" 
-                                    checked={newItem.flavor === 'salty'} 
-                                    onChange={() => setNewItem({...newItem, flavor: 'salty'})} 
-                                />
-                                <span className="text-sm font-bold">鹹食 🍘</span>
-                            </label>
-                        </div>
-                        
-                        <div className="flex gap-3">
-                            <div className="flex-1">
-                                <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">單價 (JPY)</label>
-                                <input 
-                                    type="number"
-                                    className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-mono font-bold"
-                                    placeholder="0"
-                                    value={newItem.priceYen || ''}
-                                    onChange={e => setNewItem({...newItem, priceYen: parseInt(e.target.value) || 0})}
-                                />
-                            </div>
-                            <div className="w-1/3">
-                                <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">數量</label>
-                                <input 
-                                    type="number"
-                                    className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-mono font-bold text-center"
-                                    value={newItem.quantity}
-                                    onChange={e => setNewItem({...newItem, quantity: Math.max(1, parseInt(e.target.value) || 1)})}
-                                />
-                            </div>
-                        </div>
-
-                        <textarea 
-                          className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-base" 
-                          placeholder="備註..."
-                          value={newItem.description}
-                          onChange={e => setNewItem({...newItem, description: e.target.value})}
-                        />
-                    </div>
-                </div>
-             </div>
-          </div>
+                )}
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={(e) => handleImageUpload(e, (base64) => setNewItem({...newItem, imageUrl: base64}))} 
+                    accept="image/*,image/heic,image/heif" 
+                    hidden 
+                />
+            </div>
+            {/* 手機版貼上按鈕 */}
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleClipboardRead((base64) => setNewItem({...newItem, imageUrl: base64}));
+                }}
+                className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm text-wafu-indigo text-[10px] px-2 py-1.5 rounded-lg shadow-sm border border-stone-200 font-bold hover:bg-white active:scale-95 flex items-center gap-1 z-20 transition-all"
+            >
+                <span>📋</span>
+                <span>貼上</span>
+            </button>
         </div>
-      )}
+
+        <div className="space-y-5">
+            <input 
+                className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-bold font-serif" 
+                placeholder="商品名稱"
+                value={newItem.name}
+                onChange={e => setNewItem({...newItem, name: e.target.value})}
+            />
+
+            {/* 口味選擇 */}
+            <div className="flex gap-4">
+                <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
+                    ${newItem.flavor === 'sweet' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
+                    <input 
+                        type="radio" 
+                        name="flavor" 
+                        className="hidden" 
+                        checked={newItem.flavor === 'sweet'} 
+                        onChange={() => setNewItem({...newItem, flavor: 'sweet'})} 
+                    />
+                    <span className="text-sm font-bold">甜食 🍰</span>
+                </label>
+                <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
+                    ${newItem.flavor === 'salty' ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
+                    <input 
+                        type="radio" 
+                        name="flavor" 
+                        className="hidden" 
+                        checked={newItem.flavor === 'salty'} 
+                        onChange={() => setNewItem({...newItem, flavor: 'salty'})} 
+                    />
+                    <span className="text-sm font-bold">鹹食 🍘</span>
+                </label>
+            </div>
+            
+            <div className="flex gap-3">
+                <div className="flex-1">
+                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">單價 (JPY)</label>
+                    <input 
+                        type="number"
+                        className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-mono font-bold"
+                        placeholder="0"
+                        value={newItem.priceYen || ''}
+                        onChange={e => setNewItem({...newItem, priceYen: parseInt(e.target.value) || 0})}
+                    />
+                </div>
+                <div className="w-1/3">
+                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">數量</label>
+                    <input 
+                        type="number"
+                        className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-mono font-bold text-center"
+                        value={newItem.quantity}
+                        onChange={e => setNewItem({...newItem, quantity: Math.max(1, parseInt(e.target.value) || 1)})}
+                    />
+                </div>
+            </div>
+
+            <textarea 
+                className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-base" 
+                placeholder="備註..."
+                value={newItem.description}
+                onChange={e => setNewItem({...newItem, description: e.target.value})}
+            />
+        </div>
+      </Modal>
     </div>
   );
 };

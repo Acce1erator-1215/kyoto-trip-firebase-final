@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icons } from './Icon';
 
 interface FlightPassProps {
@@ -21,10 +21,20 @@ export const FlightPass: React.FC<FlightPassProps> = ({
 }) => {
   const [isFlying, setIsFlying] = useState(false);
 
+  // cleanup timer on unmount to prevent memory leaks
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isFlying) {
+      timer = setTimeout(() => setIsFlying(false), 8000); // 8 seconds duration
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isFlying]);
+
   const handleFlightClick = () => {
     if(isFlying) return;
     setIsFlying(true);
-    setTimeout(() => setIsFlying(false), 8000); // 8 seconds duration
   };
 
   return (

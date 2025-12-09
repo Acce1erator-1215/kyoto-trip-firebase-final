@@ -1,4 +1,5 @@
 
+
 /**
  * 計算兩個座標點之間的直線距離 (單位：公尺)
  * 使用 Haversine formula (半正矢公式)，適用於地球球面距離計算
@@ -82,7 +83,7 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
   
       return null;
     } catch (e) {
-      console.warn("解析 Google Maps URL 失敗", e);
+      // console.warn removed
       return null;
     }
   };
@@ -113,7 +114,7 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
           }
           return null;
       } catch (error) {
-          console.error("Geocoding search failed:", error);
+          // console.error removed
           return null;
       }
   };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SightseeingSpot } from '../types';
 import { Icons } from './Icon';
@@ -6,6 +5,7 @@ import { db, sanitizeData } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
 import { useImageUpload } from '../hooks/useImageUpload'; // 引入圖片上傳 Hook
+import { Modal } from './common/Modal';
 
 interface Props {
   items: SightseeingSpot[];
@@ -217,58 +217,48 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
         )}
       </div>
 
-      {isAdding && (
-        <div className="fixed inset-0 bg-wafu-darkIndigo/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-slide-up relative max-h-[85dvh] flex flex-col overflow-hidden">
-             <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo rounded-t-2xl shadow-md z-20">
-                 <button onClick={() => setIsAdding(false)} className="text-white/80 font-bold text-sm hover:text-white transition-colors active-bounce px-2">取消</button>
-                 <h3 className="text-lg font-bold font-serif text-white tracking-widest">{editingId ? '編輯景點' : '新增景點'}</h3>
-                 <button onClick={handleSave} disabled={!form.name || isSubmitting} className="bg-white text-wafu-indigo text-sm px-4 py-1.5 rounded-lg font-bold shadow-sm hover:bg-stone-100 disabled:opacity-50 disabled:shadow-none transition-all active-bounce flex items-center gap-2">
-                    {isSubmitting ? '...' : '儲存'}
-                 </button>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto px-8 py-8 pb-32 relative bg-white">
-                <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
-                <div className="relative z-10">
-                    <div className="relative w-full mb-6">
-                        <div onClick={triggerUpload} className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform">
-                            {form.imageUrl ? (
-                                <img src={form.imageUrl} className="w-full h-full object-cover" alt="preview" />
-                            ) : (
-                                <div className="flex flex-col items-center text-stone-400"><Icons.Plus /><span className="text-[10px] mt-1 font-bold">景點照片 (可直接貼上)</span></div>
-                            )}
-                            <input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, (base64) => setForm({...form, imageUrl: base64}))} accept="image/*,image/heic,image/heif" hidden />
-                        </div>
-                        {/* 手機版貼上按鈕 */}
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleClipboardRead((base64) => setForm({...form, imageUrl: base64}));
-                            }}
-                            className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm text-wafu-indigo text-[10px] px-2 py-1.5 rounded-lg shadow-sm border border-stone-200 font-bold hover:bg-white active:scale-95 flex items-center gap-1 z-20 transition-all"
-                        >
-                            <span>📋</span>
-                            <span>貼上</span>
-                        </button>
-                    </div>
-
-                    <div className="space-y-4">
-                        <input className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-bold font-serif" placeholder="景點名稱" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-                        
-                        <div className="relative">
-                            <input className="w-full p-3 pl-9 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm" placeholder="Google Maps 連結 (或留空自動搜尋)..." value={form.mapsUrl} onChange={e => setForm({...form, mapsUrl: e.target.value})} />
-                            <div className="absolute left-3 top-3.5 text-stone-400"><Icons.MapLink /></div>
-                        </div>
-
-                        <textarea className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-sm" placeholder="備註..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
-                    </div>
-                </div>
-             </div>
-          </div>
+      <Modal
+        isOpen={isAdding}
+        onClose={() => setIsAdding(false)}
+        title={editingId ? '編輯景點' : '新增景點'}
+        onConfirm={handleSave}
+        isSubmitting={isSubmitting}
+        confirmDisabled={!form.name || isSubmitting}
+      >
+        <div className="relative w-full mb-6">
+            <div onClick={triggerUpload} className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform">
+                {form.imageUrl ? (
+                    <img src={form.imageUrl} className="w-full h-full object-cover" alt="preview" />
+                ) : (
+                    <div className="flex flex-col items-center text-stone-400"><Icons.Plus /><span className="text-[10px] mt-1 font-bold">景點照片 (可直接貼上)</span></div>
+                )}
+                <input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, (base64) => setForm({...form, imageUrl: base64}))} accept="image/*,image/heic,image/heif" hidden />
+            </div>
+             {/* 手機版貼上按鈕 */}
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleClipboardRead((base64) => setForm({...form, imageUrl: base64}));
+                }}
+                className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm text-wafu-indigo text-[10px] px-2 py-1.5 rounded-lg shadow-sm border border-stone-200 font-bold hover:bg-white active:scale-95 flex items-center gap-1 z-20 transition-all"
+            >
+                <span>📋</span>
+                <span>貼上</span>
+            </button>
         </div>
-      )}
+
+        <div className="space-y-4">
+            <input className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-bold font-serif" placeholder="景點名稱" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+            
+            <div className="relative">
+                <input className="w-full p-3 pl-9 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-sm" placeholder="Google Maps 連結 (或留空自動搜尋)..." value={form.mapsUrl} onChange={e => setForm({...form, mapsUrl: e.target.value})} />
+                <div className="absolute left-3 top-3.5 text-stone-400"><Icons.MapLink /></div>
+            </div>
+
+            <textarea className="w-full p-4 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo resize-none h-24 placeholder:text-stone-300 text-sm" placeholder="備註..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Itinerary } from './Itinerary';
 import { ShoppingList } from './ShoppingList';
@@ -12,7 +11,6 @@ import { BottomNavigation, Tab } from './BottomNavigation';
 import { SakuraOverlay } from './SakuraOverlay';
 import { Header } from './Header';         
 import { MapControls } from './MapControls'; 
-import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Hooks
 import { useDraggableScroll } from '../hooks/useDraggableScroll';
@@ -78,8 +76,8 @@ export default function App() {
 
   return (
     <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base ring-1 ring-black/5">
-      <SpeedInsights />
       
+      {/* 資料庫錯誤提示 (通常是權限問題) */}
       {dbError && (
         <div className="fixed inset-0 z-[20000] bg-black/80 flex flex-col items-center justify-center text-white p-8 text-center backdrop-blur-md">
             <div className="text-4xl mb-4">⚠️</div>
@@ -88,17 +86,22 @@ export default function App() {
         </div>
       )}
 
+      {/* 櫻花飄落特效層 */}
       <SakuraOverlay petals={sakuraPetals} />
 
+      {/* 頂部導航欄 (重構：已抽離為獨立組件) */}
       <Header triggerSakura={triggerSakura} isSpinning={isSpinning} />
 
+      {/* 主要內容捲動區 */}
       <div ref={mainContentDrag.ref} {...mainContentDrag.events} className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper ${mainContentDrag.className}`}>
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
           
+          {/* 1. 行程 Tab */}
           {activeTab === 'itinerary' && (
             <>
               <DateSelector selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
               
+              {/* 地圖控制列 (重構：已抽離) */}
               <MapControls 
                 showMap={showMap} 
                 setShowMap={setShowMap} 
@@ -106,12 +109,14 @@ export default function App() {
                 onCenterUser={handleCenterOnUser} 
               />
 
+              {/* 地圖組件 */}
               {showMap && (
                 <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                    <MapComponent items={currentDayItems} userLocation={userLocation} focusedLocation={focusedLocation} />
                 </div>
               )}
               
+              {/* 行程列表 */}
               <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-fixed bg-top">
                 <div key={selectedDay} className="animate-fade-in-up-gentle">
                     <Itinerary 
@@ -127,8 +132,10 @@ export default function App() {
             </>
           )}
 
+          {/* 2. 景點 Tab */}
           {activeTab === 'sightseeing' && (
             <>
+                {/* 地圖控制列 (重構：重複使用) */}
                 <MapControls 
                   showMap={showMap} 
                   setShowMap={setShowMap} 
@@ -147,8 +154,10 @@ export default function App() {
             </>
           )}
 
+          {/* 3. 美食 Tab */}
           {activeTab === 'food' && (
              <>
+                {/* 地圖控制列 (重構：重複使用) */}
                 <MapControls 
                   showMap={showMap} 
                   setShowMap={setShowMap} 
@@ -167,24 +176,21 @@ export default function App() {
              </>
           )}
 
+          {/* 4. 記帳 Tab */}
           {activeTab === 'money' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <ExpenseTracker 
-                expenses={expenses} 
-                currentRate={currentRate} 
-                refreshRate={refreshRate}
-                rateLastUpdated={rateLastUpdated}
-                isRateLoading={isRateLoading}
-              />
+              <ExpenseTracker expenses={expenses} currentRate={currentRate} refreshRate={refreshRate} isRateLoading={isRateLoading} rateLastUpdated={rateLastUpdated} />
             </div>
           )}
 
+          {/* 5. 伴手禮 Tab */}
           {activeTab === 'shop' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
               <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
             </div>
           )}
           
+          {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
              <div className="pt-8 px-6 min-h-screen bg-seigaiha bg-fixed pb-32">
                 <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
@@ -211,6 +217,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* 底部導航列 */}
       <BottomNavigation 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 

@@ -11,6 +11,16 @@ interface Props {
   focusedLocation?: { lat: number, lng: number } | null;   // 指定要聚焦的座標
 }
 
+// 輔助函式：HTML 轉義，防止 XSS
+const escapeHtml = (unsafe: string) => {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+ };
+
 /**
  * 地圖組件 (Map Component)
  * 使用 Leaflet.js 渲染 OpenStreetMap
@@ -103,7 +113,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         }, 200); // 200ms 延遲，配合 CSS transition 時間
         return () => clearTimeout(timer);
     }
-  });
+  }, []); // Add empty dependency array to run only on mount
 
   // 當 items 更新時，重新繪製地點標記 (Markers)
   useEffect(() => {
@@ -125,10 +135,12 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         const lng = item.lng!;
         
         // 判斷標題 (Itinerary 用 location, 其他用 name)
-        const title = (item as any).location || (item as any).name || '地點';
+        const rawTitle = (item as any).location || (item as any).name || '地點';
+        const title = escapeHtml(rawTitle); // XSS 防護
         
         // 取得該類別的顏色與圖示
         const style = getItemStyle(item);
+        const typeLabel = escapeHtml(style.typeLabel); // XSS 防護
         
         // 判斷顯示內容：
         // 如果是行程項目 (有 day 屬性)，顯示「數字序號」以便對照時間順序
@@ -169,7 +181,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
             .bindPopup(`
                 <div style="font-family: 'Noto Sans JP'; min-width: 150px;">
                     <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-                        <span style="background-color: ${style.color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">${style.typeLabel}</span>
+                        <span style="background-color: ${style.color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">${typeLabel}</span>
                     </div>
                     <div style="font-weight: bold; color: #183654; margin-bottom: 4px; font-size: 14px;">${title}</div>
                     ${item.mapsUrl ? `<a href="${item.mapsUrl}" target="_blank" style="display: inline-block; background: #183654; color: white; text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 10px;">Google Maps</a>` : ''}
