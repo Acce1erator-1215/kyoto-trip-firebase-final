@@ -58,39 +58,45 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* 
            Modal Content & Footer
-           按鈕移至此處，使其成為可捲動內容的一部分
-           pb-12 -> pb-40: 大幅增加底部預留空間 (約 160px)，確保按鈕絕對可以被捲動出來，不會被手機下方 Bar 遮住
+           修正: 將 padding 移至內部 div，解決 Safari/iOS 上 padding-bottom 在 scroll container 失效的問題
+           同時確保背景紋理能覆蓋整個捲動區域
         */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 pb-40 relative bg-white overscroll-contain">
-          <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
-          <div className="relative z-10">
-            {children}
+        <div className="flex-1 overflow-y-auto relative bg-white overscroll-contain">
+          
+          {/* Inner Content Wrapper: 負責實際的 padding 與佈局 */}
+          <div className="relative min-h-full px-6 py-6 pb-24">
+             {/* Background texture layer */}
+             <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none"></div>
 
-            {/* Scrollable Action Buttons (Footer) */}
-            <div className="mt-6 pt-6 border-t border-dashed border-stone-200 flex gap-4">
-              <button 
-                onClick={onClose}
-                className="flex-1 py-3 rounded-xl border border-stone-200 bg-stone-50 text-stone-500 font-bold hover:bg-stone-100 transition-colors active:scale-95"
-              >
-                取消
-              </button>
-              <button 
-                onClick={onConfirm}
-                disabled={confirmDisabled || isSubmitting}
-                className="flex-[2] py-3 rounded-xl bg-wafu-indigo text-white font-bold shadow-washi hover:bg-wafu-darkIndigo disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                   <>
-                     <span className="animate-spin text-lg">↻</span>
-                     <span>處理中...</span>
-                   </>
-                ) : (
-                   <>
-                     <Icons.Check />
-                     <span>{confirmLabel}</span>
-                   </>
-                )}
-              </button>
+             <div className="relative z-10">
+                {children}
+
+                {/* Scrollable Action Buttons (Footer) */}
+                <div className="mt-8 pt-6 border-t border-dashed border-stone-200 flex gap-4">
+                  <button 
+                    onClick={onClose}
+                    className="flex-1 py-3 rounded-xl border border-stone-200 bg-stone-50 text-stone-500 font-bold hover:bg-stone-100 transition-colors active:scale-95"
+                  >
+                    取消
+                  </button>
+                  <button 
+                    onClick={onConfirm}
+                    disabled={confirmDisabled || isSubmitting}
+                    className="flex-[2] py-3 rounded-xl bg-wafu-indigo text-white font-bold shadow-washi hover:bg-wafu-darkIndigo disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                       <>
+                         <span className="animate-spin text-lg">↻</span>
+                         <span>處理中...</span>
+                       </>
+                    ) : (
+                       <>
+                         <Icons.Check />
+                         <span>{confirmLabel}</span>
+                       </>
+                    )}
+                  </button>
+                </div>
             </div>
           </div>
         </div>
