@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Icons } from './Icon';
 
@@ -23,7 +22,7 @@ export const FlightPass: React.FC<FlightPassProps> = ({
 
   // cleanup timer on unmount to prevent memory leaks
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (isFlying) {
       timer = setTimeout(() => setIsFlying(false), 8000); // 8 seconds duration
     }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { SightseeingSpot } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
@@ -45,6 +46,29 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
 
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
+
+  // 依距離排序邏輯
+  const sortedItems = useMemo(() => {
+    if (!userLocation) return activeItems;
+
+    return [...activeItems].sort((a, b) => {
+      // 若有座標則計算距離，否則視為無限遠
+      const distA = (a.lat && a.lng) ? calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) : Infinity;
+      const distB = (b.lat && b.lng) ? calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng) : Infinity;
+      
+      // 兩者都有距離：由近到遠
+      if (distA !== Infinity && distB !== Infinity) {
+        return distA - distB;
+      }
+      
+      // 其中一個有距離：有距離的排前面
+      if (distA !== Infinity) return -1;
+      if (distB !== Infinity) return 1;
+
+      // 都沒有距離：維持原順序
+      return 0;
+    });
+  }, [activeItems, userLocation]);
 
   const openAdd = () => {
     setEditingId(null);
@@ -137,7 +161,7 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
       </div>
 
       <div className="space-y-6">
-        {activeItems.map(item => {
+        {sortedItems.map(item => {
            const distanceStr = (userLocation && item.lat && item.lng && item.mapsUrl) 
               ? formatDistance(calculateDistance(userLocation.lat, userLocation.lng, item.lat, item.lng))
               : null;

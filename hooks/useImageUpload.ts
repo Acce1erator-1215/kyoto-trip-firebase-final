@@ -1,5 +1,4 @@
-
-import { useRef, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { resizeImage } from '../services/imageUtils';
 
 interface UseImageUploadResult {
