@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Itinerary } from './Itinerary';
 import { ShoppingList } from './ShoppingList';
@@ -75,7 +76,8 @@ export default function App() {
   };
 
   return (
-    <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base ring-1 ring-black/5">
+    // 修改 1: 移除 max-w-md，改為 w-full fixed inset-0 實現全螢幕響應式
+    <div className="fixed inset-0 w-full h-[100dvh] bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
       {/* 資料庫錯誤提示 (通常是權限問題) */}
       {dbError && (
@@ -111,14 +113,16 @@ export default function App() {
 
               {/* 地圖組件 */}
               {showMap && (
-                <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                // 修改 2: 增加 lg:h-72 讓桌面版地圖更高
+                <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                    <MapComponent items={currentDayItems} userLocation={userLocation} focusedLocation={focusedLocation} />
                 </div>
               )}
               
               {/* 行程列表 */}
               <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-fixed bg-top">
-                <div key={selectedDay} className="animate-fade-in-up-gentle">
+                {/* 修改 3: 加入 max-w-3xl 限制內容寬度 */}
+                <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl mx-auto w-full">
                     <Itinerary 
                         dayIndex={selectedDay} 
                         items={currentDayItems} 
@@ -135,7 +139,6 @@ export default function App() {
           {/* 2. 景點 Tab */}
           {activeTab === 'sightseeing' && (
             <>
-                {/* 地圖控制列 (重構：重複使用) */}
                 <MapControls 
                   showMap={showMap} 
                   setShowMap={setShowMap} 
@@ -144,12 +147,15 @@ export default function App() {
                 />
 
                 {showMap && (
-                    <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                    <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                         <MapComponent items={sightseeingSpots} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
                 <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-                    <SightseeingList items={sightseeingSpots} userLocation={userLocation} onFocus={handleFocus} />
+                   {/* 修改 4: 加入 max-w-3xl 限制內容寬度 */}
+                   <div className="max-w-3xl mx-auto w-full">
+                      <SightseeingList items={sightseeingSpots} userLocation={userLocation} onFocus={handleFocus} />
+                   </div>
                 </div>
             </>
           )}
@@ -157,7 +163,6 @@ export default function App() {
           {/* 3. 美食 Tab */}
           {activeTab === 'food' && (
              <>
-                {/* 地圖控制列 (重構：重複使用) */}
                 <MapControls 
                   showMap={showMap} 
                   setShowMap={setShowMap} 
@@ -166,12 +171,15 @@ export default function App() {
                 />
 
                 {showMap && (
-                    <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                    <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                         <MapComponent items={restaurants} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
                 <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-                    <FoodList items={restaurants} userLocation={userLocation} onFocus={handleFocus} />
+                    {/* 修改 5: 加入 max-w-3xl 限制內容寬度 */}
+                    <div className="max-w-3xl mx-auto w-full">
+                      <FoodList items={restaurants} userLocation={userLocation} onFocus={handleFocus} />
+                    </div>
                 </div>
              </>
           )}
@@ -179,39 +187,48 @@ export default function App() {
           {/* 4. 記帳 Tab */}
           {activeTab === 'money' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <ExpenseTracker expenses={expenses} currentRate={currentRate} refreshRate={refreshRate} isRateLoading={isRateLoading} rateLastUpdated={rateLastUpdated} />
+              {/* 修改 6: 加入 max-w-3xl 限制內容寬度 */}
+              <div className="max-w-3xl mx-auto w-full">
+                <ExpenseTracker expenses={expenses} currentRate={currentRate} refreshRate={refreshRate} isRateLoading={isRateLoading} rateLastUpdated={rateLastUpdated} />
+              </div>
             </div>
           )}
 
           {/* 5. 伴手禮 Tab */}
           {activeTab === 'shop' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
+              {/* 修改 7: 伴手禮使用較寬的 max-w-4xl 以容納 4 欄網格 */}
+              <div className="max-w-4xl mx-auto w-full">
+                <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
+              </div>
             </div>
           )}
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
              <div className="pt-8 px-6 min-h-screen bg-seigaiha bg-fixed pb-32">
-                <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
-                    <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>
-                    <p className="text-sm font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
-                      <span>Booking Ref:</span>
-                      <span className="text-wafu-gold font-mono">FO7V9A</span>
-                    </p>
-                </div>
-                
-                <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
-                    <span className="tracking-widest">去程 (Outbound)</span>
-                </h3>
-                <FlightPass originCode="TPE" originCity="Taipei" destCode="UKB" destCity="Kobe" flightNum="JX 834" date="01/17 (Sat)" time="07:00 - 10:30" seat="12A, 12B" />
+                {/* 修改 8: 加入 max-w-3xl 限制內容寬度 */}
+                <div className="max-w-3xl mx-auto w-full">
+                  <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
+                      <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>
+                      <p className="text-sm font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                        <span>Booking Ref:</span>
+                        <span className="text-wafu-gold font-mono">FO7V9A</span>
+                      </p>
+                  </div>
+                  
+                  <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
+                      <span className="tracking-widest">去程 (Outbound)</span>
+                  </h3>
+                  <FlightPass originCode="TPE" originCity="Taipei" destCode="UKB" destCity="Kobe" flightNum="JX 834" date="01/17 (Sat)" time="07:00 - 10:30" seat="12A, 12B" />
 
-                <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
-                    <div className="w-1.5 h-1.5 rounded-full bg-wafu-indigo shadow-[0_0_8px_rgba(24,54,84,0.6)]"></div>
-                    <span className="tracking-widest">回程 (Inbound)</span>
-                </h3>
-                <FlightPass originCode="KIX" originCity="Osaka" destCode="TPE" destCity="Taipei" flightNum="JX 823" date="01/24 (Sat)" time="14:00 - 16:15" seat="12A, 12B" isReturn={true} />
+                  <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
+                      <div className="w-1.5 h-1.5 rounded-full bg-wafu-indigo shadow-[0_0_8px_rgba(24,54,84,0.6)]"></div>
+                      <span className="tracking-widest">回程 (Inbound)</span>
+                  </h3>
+                  <FlightPass originCode="KIX" originCity="Osaka" destCode="TPE" destCity="Taipei" flightNum="JX 823" date="01/24 (Sat)" time="14:00 - 16:15" seat="12A, 12B" isReturn={true} />
+                </div>
              </div>
           )}
         </div>
