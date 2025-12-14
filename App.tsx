@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Itinerary } from './components/Itinerary';
 import { ShoppingList } from './components/ShoppingList';
@@ -9,9 +10,8 @@ import { MapComponent } from './components/MapComponent';
 import { DateSelector } from './components/DateSelector';
 import { BottomNavigation, Tab } from './components/BottomNavigation';
 import { SakuraOverlay } from './components/SakuraOverlay';
-import { Header } from './components/Header';         // 新增引用
-import { MapControls } from './components/MapControls'; // 新增引用
-import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Header } from './components/Header';         
+import { MapControls } from './components/MapControls'; 
 
 // Hooks
 import { useDraggableScroll } from './hooks/useDraggableScroll';
@@ -21,16 +21,15 @@ import { useFirestoreData } from './hooks/useFirestoreData';
 import { useSakuraAnimation } from './hooks/useSakuraAnimation';
 
 export default function App() {
-  // 狀態管理
-  const [activeTab, setActiveTab] = useState<Tab>('itinerary'); // 目前選中的分頁
-  const [selectedDay, setSelectedDay] = useState<number>(1); // 目前選中的天數 (0=待辦事項)
-  const [showMap, setShowMap] = useState<boolean>(true); // 是否顯示地圖
-  const [focusedLocation, setFocusedLocation] = useState<{lat: number, lng: number} | null>(null); // 地圖聚焦座標
+  const [activeTab, setActiveTab] = useState<Tab>('itinerary'); 
+  const [selectedDay, setSelectedDay] = useState<number>(1); 
+  const [showMap, setShowMap] = useState<boolean>(true); 
+  const [focusedLocation, setFocusedLocation] = useState<{lat: number, lng: number} | null>(null); 
   
-  // 自訂 Hooks
-  const { userLocation } = useGeolocation(); // 使用者位置
-  const { currentRate } = useExchangeRate(); // 匯率
-  const { isSpinning, sakuraPetals, triggerSakura } = useSakuraAnimation(); // 櫻花動畫
+  const { userLocation } = useGeolocation(); 
+  const { currentRate, refresh: refreshRate, isLoading: isRateLoading, lastUpdated: rateLastUpdated } = useExchangeRate(); 
+  const { isSpinning, sakuraPetals, triggerSakura } = useSakuraAnimation(); 
+  
   const { 
     itineraryItems, 
     expenses, 
@@ -38,15 +37,13 @@ export default function App() {
     restaurants, 
     sightseeingSpots, 
     dbError 
-  } = useFirestoreData(); // Firebase 資料
+  } = useFirestoreData(); 
 
-  // 主內容區域的垂直拖曳捲動邏輯
   const mainContentDrag = useDraggableScroll({ direction: 'vertical' });
 
-  // 優化：使用 useMemo 緩存計算結果，避免每次 render 都重新過濾排序
   const currentDayItems = useMemo(() => {
     return itineraryItems
-      .filter(i => i.day === selectedDay && !i.deleted)
+      .filter(i => i.day === selectedDay && !i.deleted) 
       .sort((a, b) => {
         if (!a.time) return 1;
         if (!b.time) return -1;
@@ -54,12 +51,10 @@ export default function App() {
       });
   }, [itineraryItems, selectedDay]);
 
-  // 優化：緩存已刪除項目
   const currentDayDeletedItems = useMemo(() => {
     return itineraryItems.filter(i => i.day === selectedDay && i.deleted);
   }, [itineraryItems, selectedDay]);
   
-  // 處理聚焦事件：捲動到頂部並將地圖移動到指定座標
   const handleFocus = (lat: number, lng: number) => {
       if (!showMap) setShowMap(true);
       setFocusedLocation({ lat, lng });
@@ -68,7 +63,6 @@ export default function App() {
       }
   };
 
-  // 定位到使用者當前位置
   const handleCenterOnUser = () => {
     if (userLocation) {
       if (!showMap) setShowMap(true);
@@ -82,12 +76,11 @@ export default function App() {
   };
 
   return (
-    <div className="max-w-md mx-auto h-[100dvh] bg-wafu-paper relative flex flex-col shadow-2xl overflow-hidden font-sans text-base ring-1 ring-black/5">
-      <SpeedInsights />
+    <div className="fixed inset-0 w-full h-[100dvh] bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
       {/* 資料庫錯誤提示 (通常是權限問題) */}
       {dbError && (
-        <div className="fixed inset-0 z-[10000] bg-black/80 flex flex-col items-center justify-center text-white p-8 text-center backdrop-blur-md">
+        <div className="fixed inset-0 z-[20000] bg-black/80 flex flex-col items-center justify-center text-white p-8 text-center backdrop-blur-md">
             <div className="text-4xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold mb-2">資料庫存取被拒</h2>
             <button onClick={() => window.location.reload()} className="bg-white text-black px-6 py-2 rounded-full font-bold active:scale-95 transition-transform">重新整理</button>
@@ -119,14 +112,14 @@ export default function App() {
 
               {/* 地圖組件 */}
               {showMap && (
-                <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                    <MapComponent items={currentDayItems} userLocation={userLocation} focusedLocation={focusedLocation} />
                 </div>
               )}
               
               {/* 行程列表 */}
               <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-fixed bg-top">
-                <div key={selectedDay} className="animate-fade-in-up-gentle">
+                <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl mx-auto w-full">
                     <Itinerary 
                         dayIndex={selectedDay} 
                         items={currentDayItems} 
@@ -152,12 +145,14 @@ export default function App() {
                 />
 
                 {showMap && (
-                    <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                    <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                         <MapComponent items={sightseeingSpots} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
                 <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-                    <SightseeingList items={sightseeingSpots} userLocation={userLocation} onFocus={handleFocus} />
+                   <div className="max-w-3xl mx-auto w-full">
+                      <SightseeingList items={sightseeingSpots} userLocation={userLocation} onFocus={handleFocus} />
+                   </div>
                 </div>
             </>
           )}
@@ -174,12 +169,14 @@ export default function App() {
                 />
 
                 {showMap && (
-                    <div className="w-full h-48 sm:h-56 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+                    <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                         <MapComponent items={restaurants} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
                 <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-                    <FoodList items={restaurants} userLocation={userLocation} onFocus={handleFocus} />
+                    <div className="max-w-3xl mx-auto w-full">
+                      <FoodList items={restaurants} userLocation={userLocation} onFocus={handleFocus} />
+                    </div>
                 </div>
              </>
           )}
@@ -187,39 +184,45 @@ export default function App() {
           {/* 4. 記帳 Tab */}
           {activeTab === 'money' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <ExpenseTracker expenses={expenses} currentRate={currentRate} />
+              <div className="max-w-3xl mx-auto w-full">
+                <ExpenseTracker expenses={expenses} currentRate={currentRate} refreshRate={refreshRate} isRateLoading={isRateLoading} rateLastUpdated={rateLastUpdated} />
+              </div>
             </div>
           )}
 
           {/* 5. 伴手禮 Tab */}
           {activeTab === 'shop' && (
             <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
+              <div className="max-w-4xl mx-auto w-full">
+                <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
+              </div>
             </div>
           )}
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
              <div className="pt-8 px-6 min-h-screen bg-seigaiha bg-fixed pb-32">
-                <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
-                    <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>
-                    <p className="text-sm font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
-                      <span>Booking Ref:</span>
-                      <span className="text-wafu-gold font-mono">FO7V9A</span>
-                    </p>
-                </div>
-                
-                <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
-                    <span className="tracking-widest">去程 (Outbound)</span>
-                </h3>
-                <FlightPass originCode="TPE" originCity="Taipei" destCode="UKB" destCity="Kobe" flightNum="JX 834" date="01/17 (Sat)" time="07:00 - 10:30" seat="12A, 12B" />
+                <div className="max-w-3xl mx-auto w-full">
+                  <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
+                      <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>
+                      <p className="text-sm font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                        <span>Booking Ref:</span>
+                        <span className="text-wafu-gold font-mono">FO7V9A</span>
+                      </p>
+                  </div>
+                  
+                  <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
+                      <span className="tracking-widest">去程 (Outbound)</span>
+                  </h3>
+                  <FlightPass originCode="TPE" originCity="Taipei" destCode="UKB" destCity="Kobe" flightNum="JX 834" date="01/17 (Sat)" time="07:00 - 10:30" seat="12A, 12B" />
 
-                <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
-                    <div className="w-1.5 h-1.5 rounded-full bg-wafu-indigo shadow-[0_0_8px_rgba(24,54,84,0.6)]"></div>
-                    <span className="tracking-widest">回程 (Inbound)</span>
-                </h3>
-                <FlightPass originCode="KIX" originCity="Osaka" destCode="TPE" destCity="Taipei" flightNum="JX 823" date="01/24 (Sat)" time="14:00 - 16:15" seat="12A, 12B" isReturn={true} />
+                  <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3 mt-10">
+                      <div className="w-1.5 h-1.5 rounded-full bg-wafu-indigo shadow-[0_0_8px_rgba(24,54,84,0.6)]"></div>
+                      <span className="tracking-widest">回程 (Inbound)</span>
+                  </h3>
+                  <FlightPass originCode="KIX" originCity="Osaka" destCode="TPE" destCity="Taipei" flightNum="JX 823" date="01/24 (Sat)" time="14:00 - 16:15" seat="12A, 12B" isReturn={true} />
+                </div>
              </div>
           )}
         </div>
