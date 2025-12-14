@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { ShoppingItem, Expense } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-import { doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+// Removed v9 modular imports
 import { ShoppingItemCard } from './shopping/ShoppingItemCard';
 import { ShoppingForm } from './shopping/ShoppingForm';
 
@@ -81,12 +81,12 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
         try {
             if (editingId) {
                 const cleanData = sanitizeData(formData);
-                await updateDoc(doc(db, 'shopping', editingId), cleanData);
+                await db.collection('shopping').doc(editingId).update(cleanData);
                 
                 // 邏輯：如果該項目已購買且有關聯的支出，需同步更新支出金額
                 if (formData.bought && formData.linkedExpenseId) {
                     const totalYen = (formData.priceYen || 0) * (formData.quantity || 1);
-                    await updateDoc(doc(db, 'expenses', formData.linkedExpenseId), {
+                    await db.collection('expenses').doc(formData.linkedExpenseId).update({
                         title: formData.name,
                         amountYen: totalYen,
                         quantity: formData.quantity
@@ -106,7 +106,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                     deleted: false
                 };
                 const cleanItem = sanitizeData(itemData);
-                await setDoc(doc(db, 'shopping', newId), cleanItem);
+                await db.collection('shopping').doc(newId).set(cleanItem);
             }
             // 重置表單
             setNewItem({ name: '', description: '', priceYen: 0, imageUrl: '', quantity: 1, flavor: undefined });
@@ -117,20 +117,20 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     })();
   };
 
-  // 切換購買狀態 (使用 writeBatch 確保原子性：Shopping 狀態更新 + Expense 新增/刪除)
+  // 切換購買狀態 (使用 db.batch() 確保原子性：Shopping 狀態更新 + Expense 新增/刪除)
   const toggleBought = async (id: string, currentItem: ShoppingItem) => {
     const newBoughtState = !currentItem.bought;
     let newLinkedId = currentItem.linkedExpenseId;
 
     try {
-        const batch = writeBatch(db);
+        const batch = db.batch();
 
         // 同步支出邏輯
         if (newBoughtState) {
           // 若標記為已買，則自動在 expenses 集合新增一筆支出
           const totalYen = (currentItem.priceYen || 0) * (currentItem.quantity || 1);
           const expenseId = Date.now().toString();
-          const expenseRef = doc(db, 'expenses', expenseId);
+          const expenseRef = db.collection('expenses').doc(expenseId);
           
           batch.set(expenseRef, {
             id: expenseId,
@@ -146,14 +146,14 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
         } else {
           // 若取消購買，則刪除對應的支出紀錄
           if (currentItem.linkedExpenseId) {
-            const expenseRef = doc(db, 'expenses', currentItem.linkedExpenseId);
+            const expenseRef = db.collection('expenses').doc(currentItem.linkedExpenseId);
             batch.delete(expenseRef);
           }
           newLinkedId = null; // Firestore null
         }
 
         // 更新購物項目狀態
-        const shoppingRef = doc(db, 'shopping', id);
+        const shoppingRef = db.collection('shopping').doc(id);
         batch.update(shoppingRef, { 
             bought: newBoughtState, 
             linkedExpenseId: newLinkedId
@@ -170,10 +170,10 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
   const handleDelete = async (id: string, item: ShoppingItem, e: React.MouseEvent) => {
       e.stopPropagation();
       try {
-        await updateDoc(doc(db, 'shopping', id), { deleted: true });
+        await db.collection('shopping').doc(id).update({ deleted: true });
 
         if (item.linkedExpenseId) {
-             await deleteDoc(doc(db, 'expenses', item.linkedExpenseId));
+             await db.collection('expenses').doc(item.linkedExpenseId).delete();
         }
       } catch (err) {
           console.error("Error deleting shopping item:", err);
@@ -181,11 +181,11 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
   };
 
   const handleRestore = async (id: string) => {
-      await updateDoc(doc(db, 'shopping', id), { deleted: false });
+      await db.collection('shopping').doc(id).update({ deleted: false });
   };
 
   const handlePermanentDelete = async (id: string) => {
-      await deleteDoc(doc(db, 'shopping', id));
+      await db.collection('shopping').doc(id).delete();
   };
 
   // 更新數量 (同步計算總價)
@@ -194,12 +194,12 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
     const newQty = Math.max(1, currentQty + delta);
     
     try {
-        await updateDoc(doc(db, 'shopping', id), { quantity: newQty });
+        await db.collection('shopping').doc(id).update({ quantity: newQty });
 
         // 如果已買，同步更新支出金額
         if (currentItem.bought && currentItem.linkedExpenseId) {
             const newTotalYen = (currentItem.priceYen || 0) * newQty;
-            await updateDoc(doc(db, 'expenses', currentItem.linkedExpenseId), {
+            await db.collection('expenses').doc(currentItem.linkedExpenseId).update({
                 quantity: newQty,
                 amountYen: newTotalYen
             });
@@ -210,7 +210,8 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
   };
 
   return (
-    <div className="pb-40 px-4">
+    // Reduced padding-bottom from 40 to 24
+    <div className="pb-24 px-4">
       <div className="mb-4 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">伴手禮</h2>
       </div>

@@ -1,20 +1,31 @@
 
-import { initializeApp } from "firebase/app";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
-
 /**
  * Firebase 設定檔
- * 負責初始化 Firebase App, Firestore 資料庫以及 App Check 安全驗證
+ * 負責初始化 Firebase App, Firestore 資料庫
+ * 
+ * 修正：
+ * 為了在瀏覽器環境 (No-Bundler/Vite Dev) 中穩定使用 Firebase v8 Compat 語法，
+ * 我們改用 HTML 中的 <script> 標籤載入 UMD 版本，並直接存取全域變數 window.firebase。
+ * 這避免了 importmap 與 esm.sh 在處理 compat 模式時的副作用問題。
  */
 
-// 安全性修正：
-// 1. 使用 Optional Chaining (?.) 防止 import.meta.env 為 undefined 時程式崩潰
-// 2. 加入後備 Key (Fallback)，確保在環境變數失效時應用程式仍可運作
+// 宣告全域變數型別，避免 TS 報錯
+declare global {
+  interface Window {
+    firebase: any;
+  }
+}
+
+// 取得全域 firebase 物件
+const firebase = window.firebase;
+
+if (!firebase) {
+  console.error("Firebase SDK 未正確載入！請檢查 index.html 的 script 標籤。");
+}
+
 const apiKey = import.meta.env?.VITE_FIREBASE_API_KEY || "AIzaSyD8LzBcWYzkYUw8y1A-UNReh75hGpvTXJk";
 
 if (!apiKey) {
-  // 理論上因為有後備 Key，這行不應該被執行，但保留作為最後防線
   console.warn("⚠️ 警告: 使用預設 API Key 或無法讀取環境變數。");
 }
 
@@ -28,47 +39,34 @@ const firebaseConfig = {
   measurementId: "G-W57REEZNFX"
 };
 
-// 初始化 Firebase 應用實例
-const app = initializeApp(firebaseConfig);
+// 初始化 Firebase 應用實例 (防止重複初始化)
+if (firebase && !firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
-// 初始化 Firestore 並啟用「離線持久化緩存」
-const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-});
-
-// 初始化 App Check
-const ENABLE_APP_CHECK = false; 
-
-if (typeof window !== 'undefined' && ENABLE_APP_CHECK) {
-  const allowedDomains = [
-    "kyoyo-trip-store.firebaseapp.com",
-    "kyoyo-trip-store.web.app",
-    "localhost" 
-  ];
-  
-  const isAllowed = allowedDomains.includes(location.hostname);
-
-  if (isAllowed) {
-    try {
-      initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider('6LfbRx8sAAAAAGMry9PFCHoF29WgEwKOqhdjgYyU'),
-        isTokenAutoRefreshEnabled: true
-      });
-      console.debug("App Check 已初始化保護中。");
-    } catch (e) {
-      console.warn("App Check 初始化失敗:", e);
-    }
-  }
+// 初始化 Firestore
+let db: any;
+if (firebase) {
+    db = firebase.firestore();
+    
+    // 啟用離線持久化
+    db.enablePersistence({ synchronizeTabs: true }).catch((err: any) => {
+        if (err.code == 'failed-precondition') {
+            console.warn("Multiple tabs open, persistence can only be enabled in one tab at a a time.");
+        } else if (err.code == 'unimplemented') {
+            console.warn("The current browser does not support all of the features required to enable persistence");
+        }
+    });
 }
 
 /**
  * 資料清理輔助函式
  * 用途：在寫入 Firestore 前移除物件中的 `undefined` 屬性
+ * Firestore 不支援直接儲存 undefined
  */
 export const sanitizeData = (data: any): any => {
   return JSON.parse(JSON.stringify(data));
 };
 
 export { db };
+export default firebase;

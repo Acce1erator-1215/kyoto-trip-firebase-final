@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, query, doc, writeBatch } from 'firebase/firestore';
+// Removed v9 modular imports
 import { db } from '../firebase';
 import { INITIAL_ITINERARY } from '../services/mockData';
 import { ItineraryItem, Expense, ShoppingItem, Restaurant, SightseeingSpot } from '../types';
@@ -33,15 +33,15 @@ export const useFirestoreData = () => {
     };
 
     // 1. 監聽 'itinerary' (行程) 集合
-    const unsubItinerary = onSnapshot(query(collection(db, 'itinerary')), async (snapshot) => {
+    const unsubItinerary = db.collection('itinerary').onSnapshot(async (snapshot) => {
       // 初始化邏輯：如果資料庫是空的且尚未嘗試初始化
       if (snapshot.empty && !seedAttempted.current) {
          seedAttempted.current = true;
          console.log("偵測到行程為空，開始寫入預設種子資料...");
          
-         const batch = writeBatch(db); // 使用 Batch 批次寫入以提升效能
+         const batch = db.batch(); // 使用 Batch 批次寫入以提升效能
          INITIAL_ITINERARY.forEach(item => {
-            const ref = doc(db, 'itinerary', item.id);
+            const ref = db.collection('itinerary').doc(item.id);
             batch.set(ref, item);
          });
          
@@ -60,25 +60,25 @@ export const useFirestoreData = () => {
     }, handleSnapshotError);
 
     // 2. 監聽 'expenses' (支出) 集合
-    const unsubExpenses = onSnapshot(query(collection(db, 'expenses')), (snapshot) => {
+    const unsubExpenses = db.collection('expenses').onSnapshot((snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
       setExpenses(items);
     }, handleSnapshotError);
 
     // 3. 監聽 'shopping' (購物清單) 集合
-    const unsubShopping = onSnapshot(query(collection(db, 'shopping')), (snapshot) => {
+    const unsubShopping = db.collection('shopping').onSnapshot((snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShoppingItem));
       setShoppingItems(items);
     }, handleSnapshotError);
 
     // 4. 監聽 'restaurants' (餐廳) 集合
-    const unsubRestaurants = onSnapshot(query(collection(db, 'restaurants')), (snapshot) => {
+    const unsubRestaurants = db.collection('restaurants').onSnapshot((snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Restaurant));
       setRestaurants(items);
     }, handleSnapshotError);
 
     // 5. 監聽 'sightseeing' (景點) 集合
-    const unsubSightseeing = onSnapshot(query(collection(db, 'sightseeing')), (snapshot) => {
+    const unsubSightseeing = db.collection('sightseeing').onSnapshot((snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SightseeingSpot));
       setSightseeingSpots(items);
     }, handleSnapshotError);

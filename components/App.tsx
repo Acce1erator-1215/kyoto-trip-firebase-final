@@ -120,7 +120,8 @@ export default function App() {
               )}
               
               {/* 行程列表 */}
-              <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-fixed bg-top">
+              {/* 修改: 移除過大的 pb-32，改由內部組件控制適當間距 */}
+              <div className="flex-1 pt-6 bg-seigaiha bg-fixed bg-top">
                 {/* 修改 3: 加入 max-w-3xl 限制內容寬度 */}
                 <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl mx-auto w-full">
                     <Itinerary 
@@ -206,7 +207,8 @@ export default function App() {
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
-             <div className="pt-8 px-6 min-h-screen bg-seigaiha bg-fixed pb-32">
+             // 修改: 將 pb-32 減小為 pb-24
+             <div className="pt-8 px-6 min-h-screen bg-seigaiha bg-fixed pb-24">
                 {/* 修改 8: 加入 max-w-3xl 限制內容寬度 */}
                 <div className="max-w-3xl mx-auto w-full">
                   <div className="mb-8 border-b border-wafu-indigo/10 pb-4">

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Expense } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+// Removed v9 modular imports
 import { ExpenseSummary } from './expenses/ExpenseSummary';
 import { ExpenseItemCard } from './expenses/ExpenseItemCard';
 import { ExpenseForm } from './expenses/ExpenseForm';
@@ -58,10 +58,10 @@ export const ExpenseTracker: React.FC<Props> = ({
     (async () => {
         try {
             if (editingId) {
-                await updateDoc(doc(db, 'expenses', editingId), sanitizeData(data));
+                await db.collection('expenses').doc(editingId).update(sanitizeData(data));
             } else {
                 const newId = Date.now().toString();
-                await setDoc(doc(db, 'expenses', newId), sanitizeData({
+                await db.collection('expenses').doc(newId).set(sanitizeData({
                     id: newId,
                     ...data,
                     category: 'other',
@@ -78,15 +78,15 @@ export const ExpenseTracker: React.FC<Props> = ({
   // CRUD Operations
   const handleDelete = async (id: string, e: React.MouseEvent) => {
      e.stopPropagation();
-     await updateDoc(doc(db, 'expenses', id), { deleted: true });
+     await db.collection('expenses').doc(id).update({ deleted: true });
   };
 
   const handleRestore = async (id: string) => {
-     await updateDoc(doc(db, 'expenses', id), { deleted: false });
+     await db.collection('expenses').doc(id).update({ deleted: false });
   };
 
   const handlePermanentDelete = async (id: string) => {
-     await deleteDoc(doc(db, 'expenses', id));
+     await db.collection('expenses').doc(id).delete();
   };
 
   const updateExpenseQuantity = async (id: string, delta: number, expense: Expense) => {
@@ -95,14 +95,15 @@ export const ExpenseTracker: React.FC<Props> = ({
     const unitPrice = expense.amountYen / currentQty;
     const newTotalYen = unitPrice * newQty;
     try {
-        await updateDoc(doc(db, 'expenses', id), { quantity: newQty, amountYen: newTotalYen });
+        await db.collection('expenses').doc(id).update({ quantity: newQty, amountYen: newTotalYen });
     } catch (err) {
         console.error("Error updating expense quantity:", err);
     }
   };
 
   return (
-    <div className="pb-40 px-5">
+    // Reduced padding-bottom from 40 to 24
+    <div className="pb-24 px-5">
       <div className="mb-4 border-b border-wafu-indigo/10 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight">旅費帳本</h2>
       </div>

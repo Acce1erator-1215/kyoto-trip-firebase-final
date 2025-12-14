@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Restaurant } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+// Removed v9 modular imports
 import { useDraggableScroll } from '../hooks/useDraggableScroll';
 import { FoodItemCard } from './food/FoodItemCard';
 import { FoodForm } from './food/FoodForm';
@@ -106,7 +106,7 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
     try {
         if (editingId) {
             const cleanData = sanitizeData(finalData);
-            await updateDoc(doc(db, 'restaurants', editingId), cleanData);
+            await db.collection('restaurants').doc(editingId).update(cleanData);
         } else {
             const newId = Date.now().toString();
             const item = {
@@ -122,7 +122,7 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
                 deleted: false
             };
             const cleanItem = sanitizeData(item);
-            await setDoc(doc(db, 'restaurants', newId), cleanItem);
+            await db.collection('restaurants').doc(newId).set(cleanItem);
         }
         setIsAdding(false);
     } catch (err) {
@@ -132,19 +132,20 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await updateDoc(doc(db, 'restaurants', id), { deleted: true });
+    await db.collection('restaurants').doc(id).update({ deleted: true });
   };
 
   const handleRestore = async (id: string) => {
-    await updateDoc(doc(db, 'restaurants', id), { deleted: false });
+    await db.collection('restaurants').doc(id).update({ deleted: false });
   };
 
   const handlePermanentDelete = async (id: string) => {
-    await deleteDoc(doc(db, 'restaurants', id));
+    await db.collection('restaurants').doc(id).delete();
   };
 
   return (
-    <div className="pb-40 px-5">
+    // Reduced padding-bottom from 40 to 24
+    <div className="pb-24 px-5">
       <div className="mb-4 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">美食清單</h2>
       </div>

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { SightseeingSpot } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+// Removed v9 modular imports
 import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
 import { useImageUpload } from '../hooks/useImageUpload'; // 引入圖片上傳 Hook
 import { Modal } from './common/Modal';
@@ -116,7 +116,7 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
         if (editingId) {
             // Strip undefined with sanitizeData
             const cleanData = sanitizeData(finalData);
-            await updateDoc(doc(db, 'sightseeing', editingId), cleanData);
+            await db.collection('sightseeing').doc(editingId).update(cleanData);
         } else {
             const newId = Date.now().toString();
             const item = {
@@ -131,7 +131,7 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
             };
             // Strip undefined with sanitizeData
             const cleanItem = sanitizeData(item);
-            await setDoc(doc(db, 'sightseeing', newId), cleanItem);
+            await db.collection('sightseeing').doc(newId).set(cleanItem);
         }
         setIsAdding(false);
     } catch (err) {
@@ -143,19 +143,20 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await updateDoc(doc(db, 'sightseeing', id), { deleted: true });
+    await db.collection('sightseeing').doc(id).update({ deleted: true });
   };
 
   const handleRestore = async (id: string) => {
-    await updateDoc(doc(db, 'sightseeing', id), { deleted: false });
+    await db.collection('sightseeing').doc(id).update({ deleted: false });
   };
 
   const handlePermanentDelete = async (id: string) => {
-    await deleteDoc(doc(db, 'sightseeing', id));
+    await db.collection('sightseeing').doc(id).delete();
   };
 
   return (
-    <div className="pb-40 px-5">
+    // Reduced padding-bottom from 40 to 24
+    <div className="pb-24 px-5">
       <div className="mb-8 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">景點清單</h2>
       </div>

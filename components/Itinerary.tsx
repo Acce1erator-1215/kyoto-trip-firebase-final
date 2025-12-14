@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ItineraryItem, Category, DATES } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+// Removed v9 modular imports
 import { ItineraryItemCard } from './itinerary/ItineraryItemCard';
 import { ItineraryForm } from './itinerary/ItineraryForm';
 
@@ -87,22 +87,22 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   // CRUD Operations
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    try { await updateDoc(doc(db, 'itinerary', id), { deleted: true }); } 
+    try { await db.collection('itinerary').doc(id).update({ deleted: true }); } 
     catch (err) { console.error("Error deleting:", err); }
   };
 
   const handleRestore = async (id: string) => {
-    try { await updateDoc(doc(db, 'itinerary', id), { deleted: false }); } 
+    try { await db.collection('itinerary').doc(id).update({ deleted: false }); } 
     catch (err) { console.error("Error restoring:", err); }
   };
 
   const handlePermanentDelete = async (id: string) => {
-    try { await deleteDoc(doc(db, 'itinerary', id)); } 
+    try { await db.collection('itinerary').doc(id).delete(); } 
     catch (err) { console.error("Error permanent deleting:", err); }
   };
 
   const toggleComplete = async (id: string, currentStatus: boolean) => {
-    await updateDoc(doc(db, 'itinerary', id), { completed: !currentStatus });
+    await db.collection('itinerary').doc(id).update({ completed: !currentStatus });
   };
 
   const handleOpenAdd = () => {
@@ -125,7 +125,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
 
     try {
       if (modalMode === 'edit' && formData.id) {
-          await updateDoc(doc(db, 'itinerary', formData.id), sanitizeData(finalData));
+          await db.collection('itinerary').doc(formData.id).update(sanitizeData(finalData));
       } else {
           const newItemId = Date.now().toString();
           const item: ItineraryItem = {
@@ -142,7 +142,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
               lng: formData.lng,
               deleted: false
           };
-          await setDoc(doc(db, 'itinerary', newItemId), sanitizeData(item));
+          await db.collection('itinerary').doc(newItemId).set(sanitizeData(item));
       }
       setModalMode('closed');
     } catch (err) {
@@ -153,7 +153,8 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   const dayDate = dayIndex > 0 ? DATES[dayIndex - 1] : '';
 
   return (
-    <div className="pb-40"> 
+    // Reduced padding-bottom from 40 to 24
+    <div className="pb-24"> 
       {/* Header Section */}
       <div className="mb-6 px-6">
         <div className="flex justify-between items-start border-b border-wafu-indigo/10 pb-4">
