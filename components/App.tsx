@@ -120,7 +120,6 @@ export default function App() {
                 </div>
               )}
               
-              {/* 修正：移除 pb-32，由內部組件控制間距 */}
               <div className="flex-1 pt-6 bg-seigaiha bg-top">
                 <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl mx-auto w-full">
                     <Itinerary 
@@ -151,7 +150,7 @@ export default function App() {
                         <MapComponent items={sightseeingSpots} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
-                {/* 修正：移除 pb-32 */}
+                
                 <div className="flex-1 pt-8 bg-seigaiha">
                    <div className="max-w-3xl mx-auto w-full">
                       <SightseeingList items={sightseeingSpots} userLocation={userLocation} onFocus={handleFocus} />
@@ -175,7 +174,7 @@ export default function App() {
                         <MapComponent items={restaurants} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
-                {/* 修正：移除 pb-32 */}
+                
                 <div className="flex-1 pt-8 bg-seigaiha">
                     <div className="max-w-3xl mx-auto w-full">
                       <FoodList items={restaurants} userLocation={userLocation} onFocus={handleFocus} />
@@ -186,7 +185,6 @@ export default function App() {
 
           {/* 4. 記帳 Tab */}
           {activeTab === 'money' && (
-            // 修正：移除 pb-32
             <div className="flex-1 pt-8 bg-seigaiha">
               <div className="max-w-3xl mx-auto w-full">
                 <ExpenseTracker expenses={expenses} currentRate={currentRate} refreshRate={refreshRate} isRateLoading={isRateLoading} rateLastUpdated={rateLastUpdated} />
@@ -196,7 +194,6 @@ export default function App() {
 
           {/* 5. 伴手禮 Tab */}
           {activeTab === 'shop' && (
-            // 修正：移除 pb-32
             <div className="flex-1 pt-8 bg-seigaiha">
               <div className="max-w-4xl mx-auto w-full">
                 <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
@@ -206,8 +203,8 @@ export default function App() {
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
-             // 機票頁面內容較少且無內部組件 Padding，保留 pb-28 以確保不被遮擋
-             <div className="flex-1 pt-8 px-6 pb-28 bg-seigaiha">
+             // 修改：將 pb-28 改為 pb-20，減少底部留白
+             <div className="flex-1 pt-8 px-6 pb-20 bg-seigaiha">
                 <div className="max-w-3xl mx-auto w-full">
                   <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
                       <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>

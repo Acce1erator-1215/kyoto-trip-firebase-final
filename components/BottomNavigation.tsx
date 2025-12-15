@@ -12,12 +12,10 @@ interface BottomNavigationProps {
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, setActiveTab, shoppingCount }) => {
   return (
-    // 修改重點：
-    // 1. pb-4 (16px): 取代原本的 env(safe-area-inset-bottom) (通常34px)，大幅減少底部留白高度
-    // 2. border-t-0: 移除頂部邊框，讓視覺更乾淨 (可選，這裡保留原本的 border-t 但稍微調淡)
-    <div className="fixed bottom-0 left-0 w-full bg-wafu-paper/95 backdrop-blur-xl border-t border-stone-200/50 z-40 shadow-[0_-5px_25px_rgba(24,54,84,0.03)] pb-4 transition-all">
+    // 修改：將 pb-4 改為 pb-0，完全移除底部安全區域留白
+    <div className="fixed bottom-0 left-0 w-full bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/10 z-40 shadow-[0_-5px_25px_rgba(24,54,84,0.03)] pb-0 transition-all">
       
-      <div className="max-w-lg mx-auto w-full grid grid-cols-6 px-1 py-1.5">
+      <div className="max-w-lg mx-auto w-full grid grid-cols-6 px-1 py-2">
         <button onClick={() => setActiveTab('itinerary')} className={`relative z-10 group flex flex-col items-center justify-center gap-0.5 transition-all duration-300 active-bounce ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
           <div className={`p-0.5 transition-all duration-500 ease-out ${activeTab === 'itinerary' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}><Icons.Calendar strokeWidth={2.5} /></div>
           <span className={`text-[10px] font-black tracking-widest transition-all ${activeTab === 'itinerary' ? 'opacity-100 font-serif border-b border-wafu-indigo pb-0.5' : 'opacity-60 scale-90'}`}>行程</span>

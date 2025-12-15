@@ -211,7 +211,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
 
   return (
     // Compact Padding
-    <div className="pb-24 px-4">
+    <div className="pb-20 px-4">
       <div className="mb-4 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">伴手禮</h2>
       </div>

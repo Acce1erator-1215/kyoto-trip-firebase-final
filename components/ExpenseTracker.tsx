@@ -103,7 +103,7 @@ export const ExpenseTracker: React.FC<Props> = ({
 
   return (
     // Compact Padding
-    <div className="pb-24 px-5">
+    <div className="pb-20 px-5">
       <div className="mb-4 border-b border-wafu-indigo/10 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight">旅費帳本</h2>
       </div>
