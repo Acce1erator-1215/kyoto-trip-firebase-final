@@ -12,8 +12,8 @@ interface BottomNavigationProps {
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, setActiveTab, shoppingCount }) => {
   return (
-    // 修正：外層 pb-0 (緊貼底部)，內層 py-1 (極小內距)
-    <div className="fixed bottom-0 left-0 w-full bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/10 z-40 shadow-[0_-5px_25px_rgba(24,54,84,0.03)] pb-0 transition-all">
+    // 修正：使用 pb-[env(safe-area-inset-bottom)] 讓背景色自動填滿 Home Indicator 區域
+    <div className="fixed bottom-0 left-0 w-full bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/10 z-40 shadow-[0_-5px_25px_rgba(24,54,84,0.03)] pb-[env(safe-area-inset-bottom)] transition-all">
       
       <div className="max-w-lg mx-auto w-full grid grid-cols-6 px-1 py-1">
         <button onClick={() => setActiveTab('itinerary')} className={`relative z-10 group flex flex-col items-center justify-center gap-0.5 transition-all duration-300 active-bounce ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>

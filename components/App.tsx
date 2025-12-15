@@ -203,8 +203,8 @@ export default function App() {
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
-             // 修改：將 pb-28 改為 pb-20，減少底部留白
-             <div className="flex-1 pt-8 px-6 pb-20 bg-seigaiha">
+             // Update padding to pb-28
+             <div className="flex-1 pt-8 px-6 pb-28 bg-seigaiha">
                 <div className="max-w-3xl mx-auto w-full">
                   <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
                       <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>
