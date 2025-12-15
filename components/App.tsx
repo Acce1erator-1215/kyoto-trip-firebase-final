@@ -76,7 +76,6 @@ export default function App() {
   };
 
   return (
-    // 修改 1: 移除 max-w-md，改為 w-full fixed inset-0 實現全螢幕響應式
     <div className="fixed inset-0 w-full h-[100dvh] bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
       {/* 資料庫錯誤提示 (通常是權限問題) */}
@@ -91,11 +90,16 @@ export default function App() {
       {/* 櫻花飄落特效層 */}
       <SakuraOverlay petals={sakuraPetals} />
 
-      {/* 頂部導航欄 (重構：已抽離為獨立組件) */}
+      {/* 頂部導航欄 */}
       <Header triggerSakura={triggerSakura} isSpinning={isSpinning} />
 
       {/* 主要內容捲動區 */}
-      <div ref={mainContentDrag.ref} {...mainContentDrag.events} className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper ${mainContentDrag.className}`}>
+      {/* 移除 select-none 允許文字選取，確保 touch 捲動順暢 */}
+      <div 
+        ref={mainContentDrag.ref} 
+        {...mainContentDrag.events} 
+        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain ${mainContentDrag.className.replace('select-none', '')}`}
+      >
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
           
           {/* 1. 行程 Tab */}
@@ -103,7 +107,6 @@ export default function App() {
             <>
               <DateSelector selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
               
-              {/* 地圖控制列 (重構：已抽離) */}
               <MapControls 
                 showMap={showMap} 
                 setShowMap={setShowMap} 
@@ -111,18 +114,17 @@ export default function App() {
                 onCenterUser={handleCenterOnUser} 
               />
 
-              {/* 地圖組件 */}
               {showMap && (
-                // 修改 2: 增加 lg:h-72 讓桌面版地圖更高
                 <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                    <MapComponent items={currentDayItems} userLocation={userLocation} focusedLocation={focusedLocation} />
                 </div>
               )}
               
-              {/* 行程列表 */}
-              {/* 修改: 移除過大的 pb-32，改由內部組件控制適當間距 */}
-              <div className="flex-1 pt-6 bg-seigaiha bg-fixed bg-top">
-                {/* 修改 3: 加入 max-w-3xl 限制內容寬度 */}
+              {/* 
+                 修正：移除 bg-fixed，避免 iOS 捲動 bug
+                 統一使用 min-h-full 確保高度足夠
+              */}
+              <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-top">
                 <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl mx-auto w-full">
                     <Itinerary 
                         dayIndex={selectedDay} 
@@ -152,8 +154,8 @@ export default function App() {
                         <MapComponent items={sightseeingSpots} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
-                <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-                   {/* 修改 4: 加入 max-w-3xl 限制內容寬度 */}
+                {/* 修正：移除 bg-fixed */}
+                <div className="flex-1 pt-8 pb-32 bg-seigaiha">
                    <div className="max-w-3xl mx-auto w-full">
                       <SightseeingList items={sightseeingSpots} userLocation={userLocation} onFocus={handleFocus} />
                    </div>
@@ -176,8 +178,8 @@ export default function App() {
                         <MapComponent items={restaurants} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
-                <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-                    {/* 修改 5: 加入 max-w-3xl 限制內容寬度 */}
+                {/* 修正：移除 bg-fixed */}
+                <div className="flex-1 pt-8 pb-32 bg-seigaiha">
                     <div className="max-w-3xl mx-auto w-full">
                       <FoodList items={restaurants} userLocation={userLocation} onFocus={handleFocus} />
                     </div>
@@ -187,8 +189,8 @@ export default function App() {
 
           {/* 4. 記帳 Tab */}
           {activeTab === 'money' && (
-            <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              {/* 修改 6: 加入 max-w-3xl 限制內容寬度 */}
+            // 修正：移除 bg-fixed
+            <div className="flex-1 pt-8 pb-32 bg-seigaiha">
               <div className="max-w-3xl mx-auto w-full">
                 <ExpenseTracker expenses={expenses} currentRate={currentRate} refreshRate={refreshRate} isRateLoading={isRateLoading} rateLastUpdated={rateLastUpdated} />
               </div>
@@ -197,8 +199,8 @@ export default function App() {
 
           {/* 5. 伴手禮 Tab */}
           {activeTab === 'shop' && (
-            <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-              {/* 修改 7: 伴手禮使用較寬的 max-w-4xl 以容納 4 欄網格 */}
+            // 修正：移除 bg-fixed
+            <div className="flex-1 pt-8 pb-32 bg-seigaiha">
               <div className="max-w-4xl mx-auto w-full">
                 <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
               </div>
@@ -207,9 +209,8 @@ export default function App() {
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
-             // 修改: 將 pb-32 減小為 pb-24
-             <div className="pt-8 px-6 min-h-screen bg-seigaiha bg-fixed pb-24">
-                {/* 修改 8: 加入 max-w-3xl 限制內容寬度 */}
+             // 修正：移除 bg-fixed
+             <div className="flex-1 pt-8 px-6 pb-32 bg-seigaiha">
                 <div className="max-w-3xl mx-auto w-full">
                   <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
                       <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2 drop-shadow-sm">機票資訊</h2>
