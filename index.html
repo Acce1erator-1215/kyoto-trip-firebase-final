@@ -120,31 +120,45 @@
         animation: jump-spin 2.5s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      /* --- 動畫：擬真櫻花飄落 (Sakura Fall) --- */
-      /* 包含旋轉 (rotate3d) 與左右搖擺 (sway) 的複合動畫 */
-      @keyframes sakura-fall-realistic {
+      /* --- 動畫：擬真櫻花飄落 (Sakura Fall) - 高效能版 --- */
+      /* 修正：完全使用 translate3d 進行 GPU 加速，避免使用 top 導致重繪 */
+      @keyframes sakura-fall-gpu {
         0% {
           opacity: 0;
-          top: -10vh; /* 從螢幕上方開始 */
-          transform: translateX(0) rotate3d(1, 1, 1, 0deg);
+          transform: translate3d(0, -10vh, 0) rotate3d(1, 1, 1, 0deg);
         }
-        10% { opacity: 0.9; }
-        25% { transform: translateX(var(--sway-x)) rotate3d(1, 0.5, 0, 45deg); }
-        50% { transform: translateX(calc(var(--sway-x) * -1)) rotate3d(0.5, 1, 0, 90deg); }
-        75% { transform: translateX(var(--sway-x)) rotate3d(0, 1, 0.5, 135deg); }
+        10% { 
+          opacity: 0.9; 
+        }
+        25% { 
+          /* 向右擺盪 */
+          transform: translate3d(var(--sway-x), 20vh, 0) rotate3d(1, 0.5, 0, 45deg); 
+        }
+        50% { 
+          /* 向左擺盪 */
+          transform: translate3d(calc(var(--sway-x) * -0.8), 50vh, 0) rotate3d(0.5, 1, 0, 90deg); 
+        }
+        75% { 
+          /* 向右擺盪 */
+          transform: translate3d(var(--sway-x), 80vh, 0) rotate3d(0, 1, 0.5, 135deg); 
+        }
         100% {
           opacity: 0;
-          top: 110vh; /* 落下至螢幕下方 */
-          transform: translateX(0) rotate3d(1, 1, 1, 180deg);
+          /* 確保完全落下螢幕 */
+          transform: translate3d(0, 110vh, 0) rotate3d(1, 1, 1, 180deg);
         }
       }
 
       .animate-sakura-fall {
         position: fixed;
-        animation-name: sakura-fall-realistic;
+        /* 初始位置在上方，避免動畫開始前閃爍 */
+        top: 0; 
+        left: 0; /* Left 由 inline-style 控制，這裡設預設值 */
+        animation-name: sakura-fall-gpu;
         animation-timing-function: linear;
         animation-fill-mode: forwards;
-        will-change: transform, top, opacity; /* 效能優化 */
+        /* 告知瀏覽器 transform 和 opacity 即將變化，啟用優化 */
+        will-change: transform, opacity; 
         z-index: 9999;
         pointer-events: none;
       }

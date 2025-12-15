@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Expense } from '../../types';
 import { Modal } from '../common/Modal';
@@ -175,7 +176,7 @@ export const ExpenseForm: React.FC<Props> = ({
                     </div>
                 </div>
                 <div className="flex justify-end">
-                    <span className="text-[9px] text-white/40 font-mono tracking-wider">Current Rate: {exchangeRate}</span>
+                    <span className="text-[9px] text-white/40 font-mono tracking-wider">Current Rate: {exchangeRate.toFixed(3)}</span>
                 </div>
             </div>
 

@@ -47,7 +47,7 @@ export const ExpenseSummary: React.FC<Props> = ({
                             <input 
                                 autoFocus
                                 type="number"
-                                className="w-12 bg-transparent text-white text-right text-xs font-mono font-bold focus:outline-none"
+                                className="w-16 bg-transparent text-white text-right text-xs font-mono font-bold focus:outline-none"
                                 value={localRate}
                                 step="0.001"
                                 onChange={e => setLocalRate(parseFloat(e.target.value) || 0)}
@@ -62,9 +62,9 @@ export const ExpenseSummary: React.FC<Props> = ({
                         ) : (
                             <span 
                                 onClick={() => setIsEditingRate(true)}
-                                className="text-xs font-mono font-bold text-white cursor-pointer border-b border-dashed border-white/40 hover:text-wafu-goldLight"
+                                className="text-xs font-mono font-bold text-white cursor-pointer border-b border-dashed border-white/40 hover:text-wafu-goldLight min-w-[3ch] text-right"
                             >
-                                {exchangeRate}
+                                {exchangeRate.toFixed(3)}
                             </span>
                         )}
                         {refreshRate && (
