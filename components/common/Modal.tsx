@@ -16,10 +16,10 @@ interface ModalProps {
 
 /**
  * 通用模態框組件 (Reusable Modal)
- * 修正：
- * 1. 使用 createPortal 將 Modal 渲染到 body 層級，避免被父層 transform 屬性影響定位。
- * 2. 調整最大高度為 92dvh，盡量利用螢幕空間。
- * 3. 增加內容底部 padding，確保按鈕絕對不會被切掉。
+ * 修正重點：
+ * 1. 手機版改為 Bottom Sheet 模式：緊貼底部、僅上方圓角、高度最大化 (95dvh)。
+ * 2. 按鈕移入 Scroll View：確保內容過長或鍵盤彈出時，使用者仍可捲動到底部點擊按鈕。
+ * 3. 解決捲動問題：移除多餘的 fixed 定位，確保內容流暢捲動。
  */
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
@@ -35,7 +35,6 @@ export const Modal: React.FC<ModalProps> = ({
 
   useEffect(() => {
     setMounted(true);
-    // 當 Modal 開啟時，鎖定背景捲動
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     }
@@ -46,27 +45,31 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen || !mounted) return null;
 
-  // 使用 Portal 將 Modal 渲染到 document.body
   return createPortal(
-    <div className="fixed inset-0 z-[10050] flex items-end sm:items-center justify-center bg-wafu-indigo/60 backdrop-blur-sm p-0 sm:p-4 animate-fade-in touch-none">
+    <div className="fixed inset-0 z-[10050] flex items-end sm:items-center justify-center touch-none">
+      {/* 背景遮罩 */}
+      <div 
+        className="absolute inset-0 bg-wafu-indigo/60 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
       
       {/* 
          Modal 本體 
-         max-h-[92dvh]: 增加高度限制，讓視窗更長
+         手機版 (default): w-full, rounded-t-2xl (僅上方圓角), 貼底
+         桌面版 (sm): rounded-2xl (全圓角), 懸浮置中
+         max-h-[95dvh]: 極大化高度，方便顯示更多內容
       */}
       <div 
-        className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border border-wafu-border animate-modal-slide-up flex flex-col max-h-[92dvh] overflow-hidden"
+        className="relative bg-white w-full sm:w-[90%] sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border-t border-x sm:border border-wafu-border animate-modal-slide-up flex flex-col max-h-[95dvh] sm:max-h-[85vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         
-        {/* 1. Sticky Header (保持固定在頂部) */}
+        {/* Header - 固定在頂部 */}
         <div className="shrink-0 px-5 py-4 flex items-center justify-between border-b border-wafu-indigo bg-wafu-indigo sm:rounded-t-xl shadow-md z-20 relative">
-          <div className="w-6"></div> {/* 佔位符 */}
-          
+          <div className="w-6"></div>
           <div className="font-bold text-white font-serif text-lg tracking-widest truncate px-2">
             {title}
           </div>
-          
           <button 
             onClick={onClose} 
             className="text-white/80 hover:text-white transition-colors active-bounce p-1"
@@ -75,44 +78,47 @@ export const Modal: React.FC<ModalProps> = ({
           </button>
         </div>
 
-        {/* 2. Scrollable Content (內容與按鈕都在這裡面捲動) */}
+        {/* Content Area - 可捲動區域 */}
         <div className="flex-1 overflow-y-auto relative bg-white overscroll-contain">
-             {/* Background texture */}
+             {/* 紙張紋理背景 */}
              <div className="absolute inset-0 bg-wafu-paper opacity-50 pointer-events-none fixed"></div>
 
              <div className="relative z-10">
-                {/* 內容區塊 */}
-                <div className="p-5 pb-0">
+                {/* 表單內容 */}
+                <div className="p-5 pb-2">
                     {children}
                 </div>
 
-                {/* 按鈕區塊 (移入捲動區) */}
-                {/* pb-20: 增加底部緩衝，確保一定滑得到 */}
-                <div className="p-5 pt-8 pb-20">
+                {/* 
+                   Action Buttons - 放在捲動區域的最下方
+                   pb-safe: 確保在 iPhone X 等有 Home Bar 的手機上，按鈕下方有足夠緩衝空間 
+                   原本是 fixed 現在改為跟隨內容流動，解決鍵盤遮擋問題
+                */}
+                <div className="p-5 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
                     <div className="flex gap-4">
-                    <button 
-                        onClick={onClose}
-                        className="flex-1 py-3 rounded-xl border border-stone-200 bg-stone-50 text-stone-500 font-bold hover:bg-stone-100 transition-colors active:scale-95"
-                    >
-                        取消
-                    </button>
-                    <button 
-                        onClick={onConfirm}
-                        disabled={confirmDisabled || isSubmitting}
-                        className="flex-[2] py-3 rounded-xl bg-wafu-indigo text-white font-bold shadow-washi hover:bg-wafu-darkIndigo disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        {isSubmitting ? (
-                            <>
-                            <span className="animate-spin text-lg">↻</span>
-                            <span>處理中...</span>
-                            </>
-                        ) : (
-                            <>
-                            <Icons.Check />
-                            <span>{confirmLabel}</span>
-                            </>
-                        )}
-                    </button>
+                        <button 
+                            onClick={onClose}
+                            className="flex-1 py-3.5 rounded-xl border border-stone-200 bg-stone-50 text-stone-500 font-bold hover:bg-stone-100 transition-colors active:scale-95"
+                        >
+                            取消
+                        </button>
+                        <button 
+                            onClick={onConfirm}
+                            disabled={confirmDisabled || isSubmitting}
+                            className="flex-[2] py-3.5 rounded-xl bg-wafu-indigo text-white font-bold shadow-washi hover:bg-wafu-darkIndigo disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? (
+                                <>
+                                <span className="animate-spin text-lg">↻</span>
+                                <span>處理中...</span>
+                                </>
+                            ) : (
+                                <>
+                                <Icons.Check />
+                                <span>{confirmLabel}</span>
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>

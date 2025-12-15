@@ -120,10 +120,7 @@ export default function App() {
                 </div>
               )}
               
-              {/* 
-                 修正：移除 bg-fixed，避免 iOS 捲動 bug
-                 統一使用 min-h-full 確保高度足夠
-              */}
+              {/* 修正：移除 bg-fixed，統一使用 pb-32 以確保不被底部導覽遮擋 */}
               <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-top">
                 <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl mx-auto w-full">
                     <Itinerary 
@@ -154,7 +151,7 @@ export default function App() {
                         <MapComponent items={sightseeingSpots} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
-                {/* 修正：移除 bg-fixed */}
+                {/* 修正：移除 bg-fixed，統一 pb-32 */}
                 <div className="flex-1 pt-8 pb-32 bg-seigaiha">
                    <div className="max-w-3xl mx-auto w-full">
                       <SightseeingList items={sightseeingSpots} userLocation={userLocation} onFocus={handleFocus} />
@@ -178,7 +175,7 @@ export default function App() {
                         <MapComponent items={restaurants} userLocation={userLocation} focusedLocation={focusedLocation} />
                     </div>
                 )}
-                {/* 修正：移除 bg-fixed */}
+                {/* 修正：移除 bg-fixed，統一 pb-32 */}
                 <div className="flex-1 pt-8 pb-32 bg-seigaiha">
                     <div className="max-w-3xl mx-auto w-full">
                       <FoodList items={restaurants} userLocation={userLocation} onFocus={handleFocus} />
@@ -189,7 +186,7 @@ export default function App() {
 
           {/* 4. 記帳 Tab */}
           {activeTab === 'money' && (
-            // 修正：移除 bg-fixed
+            // 修正：移除 bg-fixed，統一 pb-32
             <div className="flex-1 pt-8 pb-32 bg-seigaiha">
               <div className="max-w-3xl mx-auto w-full">
                 <ExpenseTracker expenses={expenses} currentRate={currentRate} refreshRate={refreshRate} isRateLoading={isRateLoading} rateLastUpdated={rateLastUpdated} />
@@ -199,7 +196,7 @@ export default function App() {
 
           {/* 5. 伴手禮 Tab */}
           {activeTab === 'shop' && (
-            // 修正：移除 bg-fixed
+            // 修正：移除 bg-fixed，統一 pb-32
             <div className="flex-1 pt-8 pb-32 bg-seigaiha">
               <div className="max-w-4xl mx-auto w-full">
                 <ShoppingList items={shoppingItems} expenses={expenses} currentRate={currentRate} />
@@ -209,7 +206,7 @@ export default function App() {
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
-             // 修正：移除 bg-fixed
+             // 修正：移除 bg-fixed，統一 pb-32
              <div className="flex-1 pt-8 px-6 pb-32 bg-seigaiha">
                 <div className="max-w-3xl mx-auto w-full">
                   <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
