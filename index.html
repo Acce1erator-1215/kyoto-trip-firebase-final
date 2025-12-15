@@ -40,6 +40,15 @@
       body {
         -webkit-tap-highlight-color: transparent; /* 移除點擊時的灰色高亮 */
         -webkit-touch-callout: none; /* 禁止長按跳出選單 */
+        /* 
+           關鍵修正：強制固定 Body，防止 iOS Safari 底部回彈露出背景色 
+           這能解決「底部留白」問題
+        */
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior: none;
       }
 
       /* --- 捲動條隱藏 (美觀考量) --- */
