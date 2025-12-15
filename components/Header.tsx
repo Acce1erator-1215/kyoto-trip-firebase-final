@@ -10,10 +10,14 @@ interface HeaderProps {
 /**
  * 頁面頂部 Header 組件
  * 包含：應用程式標題、櫻花特效觸發器、VJW 外部連結
+ * 
+ * iOS 適配重點：
+ * 使用 pt-[calc(env(safe-area-inset-top)+0.75rem)] 
+ * 確保標題不會被 iPhone 的瀏海 (Notch) 或動態島 (Dynamic Island) 遮擋
  */
 export const Header: React.FC<HeaderProps> = ({ triggerSakura, isSpinning }) => {
   return (
-    <div className="relative z-30 pt-10 pb-3 px-5 bg-wafu-bg/85 backdrop-blur-xl border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.02)] shrink-0 transition-all duration-300">
+    <div className="relative z-30 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 px-5 bg-wafu-bg/85 backdrop-blur-xl border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.02)] shrink-0 transition-all duration-300">
       {/* 頂部金色裝飾線 */}
       <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-wafu-gold/20 via-wafu-gold to-wafu-gold/20"></div>
 
