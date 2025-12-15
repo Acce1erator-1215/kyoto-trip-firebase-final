@@ -155,8 +155,8 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
   };
 
   return (
-    // iOS Adaptive Padding
-    <div className="pb-[calc(env(safe-area-inset-bottom)+6rem)] px-5">
+    // Compact Padding
+    <div className="pb-24 px-5">
       <div className="mb-8 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">景點清單</h2>
       </div>

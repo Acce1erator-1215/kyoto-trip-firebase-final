@@ -153,8 +153,8 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   const dayDate = dayIndex > 0 ? DATES[dayIndex - 1] : '';
 
   return (
-    // iOS Adaptive Padding: 使用 env(safe-area-inset-bottom) 加上基礎間距
-    <div className="pb-[calc(env(safe-area-inset-bottom)+6rem)]"> 
+    // Update padding to pb-24 (96px) to match the new compact navbar
+    <div className="pb-24"> 
       {/* Header Section */}
       <div className="mb-6 px-6">
         <div className="flex justify-between items-start border-b border-wafu-indigo/10 pb-4">
