@@ -31,7 +31,7 @@ export const useSakuraAnimation = () => {
      setTimeout(() => setIsSpinning(false), 2500); 
 
      // 1. 產生 100 片標準粉色花瓣
-     const newPetals: Petal[] = Array.from({ length: 200 }).map((_, i) => ({
+     const newPetals: Petal[] = Array.from({ length: 100 }).map((_, i) => ({
          id: Date.now() + i,
          type: 'petal',
          left: `${Math.random() * 100}%`,
@@ -40,7 +40,7 @@ export const useSakuraAnimation = () => {
          size: Math.random() * 10 + 10,         // 10~24px 大小
          color: Math.random() > 0.6 ? 'text-pink-300' : 'text-pink-200',
          swayX: `${(Math.random() - 0.5) * 200}px`, // 隨機左右搖擺幅度
-         depthBlur: Math.random() > 0.7 ? 'blur-[1px]' : 'blur-[0px]' // 30% 機率模糊，製造景深
+         depthBlur: Math.random() > 0.8 ? 'blur-[1px]' : 'blur-[0px]' // 30% 機率模糊，製造景深
      }));
      
      // 2. 產生 30 個金色花粉粒子 (增加華麗感)

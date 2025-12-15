@@ -7,24 +7,31 @@ import { ItineraryItem, Expense, ShoppingItem, Restaurant, SightseeingSpot } fro
 
 /**
  * 自訂 Hook: useFirestoreData
- * 責任：
- * 1. 實時監聽 (Real-time Listener) Firestore 中的五個主要集合
- * 2. 處理資料庫初始化 (Seeding)：若檢測到行程為空，自動寫入預設資料
- * 3. 統一管理資料載入狀態與權限錯誤
+ * 
+ * Code Review Notes:
+ * 1. 職責分離 (Separation of Concerns): 此 Hook 專注於資料的「獲取」與「同步」，不處理 UI 邏輯。
+ * 2. 實時性 (Real-time): 使用 onSnapshot 而非 get()，確保多個使用者(或多裝置)間的資料即時同步。
+ * 3. 初始種子資料 (Seeding): 包含自動檢測空資料庫並寫入 mockData 的邏輯。
  */
 export const useFirestoreData = () => {
+  // State 定義：分別儲存不同集合的資料
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [sightseeingSpots, setSightseeingSpots] = useState<SightseeingSpot[]>([]);
+  
+  // 錯誤狀態：用於 UI 顯示全螢幕錯誤 (如 API Key 失效或權限不足)
   const [dbError, setDbError] = useState(false);
 
-  // 使用 useRef 防止 React Strict Mode 下重複執行初始化寫入
+  // Ref: seedAttempted
+  // 用途：防止 React 18 Strict Mode 在開發環境下 Component Mount 兩次導致的重複寫入問題。
+  // 雖然 Firestore 的 set() 是冪等的 (idempotent)，但重複執行寫入操作浪費資源。
   const seedAttempted = useRef(false);
 
   useEffect(() => {
     // 通用錯誤處理器：攔截權限不足 (Permission Denied) 錯誤
+    // 這在 Firebase Rules 設定不正確時非常有用
     const handleSnapshotError = (err: any) => {
         console.error("Firebase Snapshot Error:", err);
         if (err.code === 'permission-denied') {
@@ -34,12 +41,16 @@ export const useFirestoreData = () => {
 
     // 1. 監聽 'itinerary' (行程) 集合
     const unsubItinerary = db.collection('itinerary').onSnapshot(async (snapshot) => {
-      // 初始化邏輯：如果資料庫是空的且尚未嘗試初始化
+      // 初始化邏輯 (Data Seeding)
+      // 當集合為空時，自動寫入預設資料，方便開發與測試
       if (snapshot.empty && !seedAttempted.current) {
          seedAttempted.current = true;
          console.log("偵測到行程為空，開始寫入預設種子資料...");
          
-         const batch = db.batch(); // 使用 Batch 批次寫入以提升效能
+         // Performance: 使用 Batch (批次寫入)
+         // 如果用 loop 呼叫 .set()，會產生 N 次網路請求。
+         // 使用 batch 只有 1 次請求，且具備原子性 (Atomic) - 要嘛全成功，要嘛全失敗。
+         const batch = db.batch(); 
          INITIAL_ITINERARY.forEach(item => {
             const ref = db.collection('itinerary').doc(item.id);
             batch.set(ref, item);
@@ -52,7 +63,7 @@ export const useFirestoreData = () => {
             console.error("寫入種子資料失敗:", e);
          }
       } else {
-         // 將 Firestore 文件轉換為我們的 TypeScript 介面格式
+         // Data Mapping: 將 Firestore Document (Snapshot) 轉換為 App 的 TypeScript 介面
          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ItineraryItem));
          setItineraryItems(items);
          setDbError(false); // 若成功讀取則清除錯誤狀態
@@ -83,7 +94,9 @@ export const useFirestoreData = () => {
       setSightseeingSpots(items);
     }, handleSnapshotError);
 
-    // 清理函式 (Cleanup)：組件卸載時取消所有監聽器，避免記憶體洩漏
+    // Cleanup Function
+    // 當組件卸載 (Unmount) 時，必須取消所有監聽器
+    // 否則會造成 Memory Leak，且在背景持續消耗流量/讀取次數
     return () => {
       unsubItinerary();
       unsubExpenses();

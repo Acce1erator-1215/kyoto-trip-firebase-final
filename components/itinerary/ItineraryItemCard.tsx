@@ -14,7 +14,16 @@ interface Props {
   onToggleComplete: (id: string, currentStatus: boolean) => void;
 }
 
-// 使用 React.memo 包覆組件，避免因父組件渲染而導致不必要的重繪
+/**
+ * 行程項目卡片 (ItineraryItemCard)
+ * 
+ * 使用 React.memo 優化效能：
+ * 由於行程列表可能很長，且涉及地圖連動，我們只在 props 真正改變時才重新渲染。
+ * 
+ * 視覺邏輯：
+ * 1. 待辦模式 (isTodo=true)：顯示 Checkbox、支援御朱印蓋章動畫 (Stamp Drop)。
+ * 2. 行程模式 (isTodo=false)：顯示時間軸 (Timeline)、距離資訊。
+ */
 export const ItineraryItemCard = React.memo(({
   item,
   isTodo,
@@ -38,13 +47,16 @@ export const ItineraryItemCard = React.memo(({
         ${hasMap ? 'cursor-pointer hover:scale-[1.01]' : ''}
       `}
     >
+      {/* 1. 時間軸 (僅非 Todo 顯示) */}
       {!isTodo && (
         <div className="w-14 shrink-0 flex flex-col items-end pt-5 relative">
           <span className="font-serif font-bold text-wafu-indigo text-base tracking-tighter">{item.time}</span>
+          {/* 時間軸圓點 */}
           <div className="w-3 h-3 rounded-full border-2 border-wafu-bg bg-wafu-indigo absolute right-[-1.15rem] top-[1.65rem] z-20 shadow-sm"></div>
         </div>
       )}
 
+      {/* 2. Checkbox (僅 Todo 顯示) */}
       {isTodo && (
         <div className="w-10 shrink-0 flex items-center justify-center pt-5">
           <button 
@@ -60,18 +72,23 @@ export const ItineraryItemCard = React.memo(({
         </div>
       )}
 
+      {/* 3. 卡片主體 */}
       <div className={`
           flex-1 bg-white rounded-2xl p-5 shadow-washi border border-stone-100 relative overflow-hidden group-hover:shadow-float transition-all active:scale-[0.99]
           ${isTodo && item.completed ? 'border-l-4 border-l-wafu-gold' : ''}
           ${isTodo && !item.completed ? 'border-l-4 border-l-stone-200' : ''}
         `}>
+          {/* 背景紋理 */}
           <div className="absolute inset-0 bg-wafu-paper opacity-80 pointer-events-none"></div>
+          
+          {/* 御朱印蓋章動畫 (完成時顯示) */}
           {isTodo && item.completed && (
               <div className="absolute top-2 right-2 z-30 animate-stamp-drop pointer-events-none opacity-80">
                   <Icons.Goshuin className="w-24 h-24 text-red-700/80 mix-blend-multiply transform rotate-12" />
               </div>
           )}
 
+          {/* 圖片預覽 */}
           {item.imageUrl && (
               <div className="mb-3 rounded-xl overflow-hidden h-32 w-full relative z-10 border border-stone-100">
                   <img src={item.imageUrl} alt={item.location} className="w-full h-full object-cover" />
@@ -79,6 +96,7 @@ export const ItineraryItemCard = React.memo(({
           )}
 
           <div className="relative z-10">
+            {/* 標頭資訊 */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex gap-2 items-center">
                 <span className={`text-[10px] px-2 py-0.5 border font-bold tracking-widest uppercase font-serif rounded-md ${CATEGORIES[item.category].color}`}>
@@ -92,6 +110,7 @@ export const ItineraryItemCard = React.memo(({
               </div>
             </div>
             
+            {/* 地點標題與操作按鈕 */}
             <div className="flex justify-between items-start gap-2">
               <h3 className={`font-serif text-lg font-bold text-wafu-text leading-snug tracking-wide ${isTodo && item.completed ? 'line-through decoration-stone-400 opacity-60' : ''}`}>
                 {item.location}

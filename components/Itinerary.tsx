@@ -16,11 +16,15 @@ interface ItineraryProps {
   onFocus?: (lat: number, lng: number) => void;       
 }
 
+/**
+ * 行程列表組件
+ */
 export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedItems = [], isTodo, userLocation, onFocus }) => {
+  // --- UI State ---
   const [modalMode, setModalMode] = useState<'closed' | 'add' | 'edit'>('closed');
   const [showTrash, setShowTrash] = useState(false);
   
-  // Default form state
+  // --- Form State ---
   const defaultFormState: Partial<ItineraryItem> = {
     day: dayIndex,
     category: 'sightseeing',
@@ -34,25 +38,32 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   };
   
   const [itemForm, setItemForm] = useState<Partial<ItineraryItem>>(defaultFormState);
+  
+  // --- Weather State ---
   const [weather, setWeather] = useState<{ temp: number; code: number; location: string } | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
 
-  // Weather Fetching Logic
+  // Logic: 根據天數與地點獲取天氣 (Open-Meteo API)
+  // Note: 依照需求還原為寫死的地點邏輯 (Hardcoded locations)
   const fetchWeather = useCallback(async () => {
+      // Day 0 是 Todo List，不需要天氣
       if (dayIndex === 0) {
           setWeather(null);
           return;
       }
+      // Offline Check
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       
       setIsWeatherLoading(true);
-      const getLocationForDay = (day: number) => {
-          if (day === 1) return { lat: 34.6901, lng: 135.1955, name: '神戶' }; 
-          if (day === 2) return { lat: 34.8151, lng: 134.6853, name: '姬路/神戶' }; 
-          return { lat: 35.0116, lng: 135.7681, name: '京都' }; 
-      };
+      
+      // Strategy: Hardcoded main city for each day
+      let target = { lat: 35.0116, lng: 135.7681, name: '京都' }; // Default Kyoto
 
-      const target = getLocationForDay(dayIndex);
+      if (dayIndex === 1) target = { lat: 34.6901, lng: 135.1955, name: '神戶' }; 
+      if (dayIndex === 2) target = { lat: 34.8151, lng: 134.6853, name: '姬路' }; 
+      if (dayIndex === 6) target = { lat: 34.7024, lng: 135.4959, name: '大阪' };
+      if (dayIndex === 8) target = { lat: 34.4320, lng: 135.2304, name: '關西機場' };
+
       try {
           const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${target.lat}&longitude=${target.lng}&current=temperature_2m,weather_code&timezone=Asia%2FTokyo`);
           if (!res.ok) throw new Error('Network response');
@@ -65,16 +76,18 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
               });
           }
       } catch (e) {
+          // Silent fail for weather
           setWeather(null);
       } finally {
           setIsWeatherLoading(false);
       }
-  }, [dayIndex]);
+  }, [dayIndex]); 
 
   useEffect(() => {
     fetchWeather();
   }, [fetchWeather]);
 
+  // Helper: WMO Weather Code to Icon Mapping
   const getWeatherIcon = (code: number) => {
       if (code <= 1) return <Icons.Sun className="w-4 h-4 text-orange-400" filled />;
       if (code <= 3) return <Icons.Cloud className="w-4 h-4 text-stone-400" />;
@@ -84,7 +97,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
       return <Icons.CloudSun className="w-4 h-4 text-stone-400" />;
   };
 
-  // CRUD Operations
+  // --- CRUD Operations ---
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try { await db.collection('itinerary').doc(id).update({ deleted: true }); } 
@@ -105,6 +118,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
     await db.collection('itinerary').doc(id).update({ completed: !currentStatus });
   };
 
+  // --- Modal Handlers ---
   const handleOpenAdd = () => {
     setItemForm({ ...defaultFormState, day: dayIndex });
     setModalMode('add');
@@ -117,7 +131,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   };
 
   const handleSave = async (formData: Partial<ItineraryItem>) => {
-    // Ensure day is number
     const finalData = { 
         ...formData, 
         day: Number(formData.day) 
@@ -153,7 +166,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   const dayDate = dayIndex > 0 ? DATES[dayIndex - 1] : '';
 
   return (
-    // Update padding to pb-28 (112px)
     <div className="pb-28"> 
       {/* Header Section */}
       <div className="mb-6 px-6">
@@ -162,6 +174,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
             <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2">
               {isTodo ? "行前準備" : `Day ${dayIndex}`}
             </h2>
+            {/* Weather Widget */}
             {!isTodo && weather && (
               <div className="flex items-center gap-2 text-sm text-wafu-text font-bold opacity-80 animate-fade-in cursor-pointer group" onClick={fetchWeather}>
                  {getWeatherIcon(weather.code)}
@@ -177,6 +190,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
             )}
           </div>
           
+          {/* Decorative Vertical Text */}
           {!isTodo && (
             <div className="writing-vertical text-right h-20 text-xs font-serif font-bold text-wafu-gold tracking-widest border-l border-wafu-indigo/20 pl-3 mt-[-0.5rem] z-0">
               {dayDate.replace(/-/g, '.')}
@@ -204,7 +218,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
           />
         ))}
 
-        {/* Trash Section */}
         {deletedItems.length > 0 && (
           <div className="mt-8 px-2">
              <button onClick={() => setShowTrash(!showTrash)} className="flex items-center gap-2 text-stone-400 hover:text-wafu-indigo text-xs font-bold uppercase tracking-wider mb-3 transition-colors active-bounce">
@@ -227,7 +240,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
         )}
       </div>
 
-      {/* Add Button */}
       <div className="mt-12 px-6">
           <button onClick={handleOpenAdd} className="w-full py-4 border border-dashed border-wafu-indigo/20 rounded-2xl text-wafu-indigo/60 flex items-center justify-center gap-2 hover:bg-white hover:border-wafu-indigo/50 hover:text-wafu-indigo transition-all duration-100 active-bounce font-bold tracking-widest bg-white/40 font-serif">
             <Icons.Plus />
@@ -235,7 +247,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
           </button>
       </div>
 
-      {/* Modal Form */}
       <ItineraryForm 
         mode={modalMode}
         initialData={itemForm}

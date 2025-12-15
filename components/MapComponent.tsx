@@ -11,7 +11,9 @@ interface Props {
   focusedLocation?: { lat: number, lng: number } | null;   // 指定要聚焦的座標
 }
 
-// 輔助函式：HTML 轉義，防止 XSS
+// Security: XSS 防護
+// 雖然我們相信自己的資料庫，但在渲染 HTML 字串到 Leaflet Popup 時，
+// 進行轉義 (Escaping) 是防禦性程式設計 (Defensive Programming) 的好習慣。
 const escapeHtml = (unsafe: string) => {
     return unsafe
          .replace(/&/g, "&amp;")
@@ -23,19 +25,23 @@ const escapeHtml = (unsafe: string) => {
 
 /**
  * 地圖組件 (Map Component)
- * 使用 Leaflet.js 渲染 OpenStreetMap
+ * 
+ * Code Review Notes:
+ * 1. 第三方庫整合: 整合非 React 原生庫 (如 Leaflet, D3, jQuery) 時，
+ *    通常需要使用 useRef 來獲取真實 DOM 節點，並在 useEffect 中管理其生命週期。
+ * 2. 避免重複初始化: 必須檢查 mapInstanceRef.current 是否存在。
  */
 export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLocation }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null); // 保存 Leaflet Map 實例
+  const mapInstanceRef = useRef<any>(null); // 保存 Leaflet Map 實例 (Mutable Ref)
   const userMarkerRef = useRef<any>(null);  // 使用者位置的 Marker
-  const itemMarkersRef = useRef<any[]>([]); // 地點 Markers 陣列
-  const hasFittedBounds = useRef(false);    // 記錄是否已執行過自動縮放
+  const itemMarkersRef = useRef<any[]>([]); // 地點 Markers 陣列，用於清除舊標記
+  const hasFittedBounds = useRef(false);    // UX: 記錄是否已執行過自動縮放，避免每次移動都重置視角
 
   // 預設中心點: 京都車站
   const KYOTO_CENTER = { lat: 34.9858, lng: 135.7588 };
 
-  // 取得標記顏色與圖示樣式
+  // Helper: 根據類別決定標記顏色 (集中管理樣式邏輯)
   const getItemStyle = (item: any): { color: string; typeLabel: string; icon: string } => {
     // 1. 判斷是否為餐廳 (有 rating 屬性且無 category 屬性)
     if (item.rating !== undefined && !item.category) {
@@ -65,16 +71,16 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     }
   };
 
-  // 初始化地圖 (僅執行一次)
+  // Effect 1: 初始化地圖 (Mount Only)
   useEffect(() => {
     if (!mapContainerRef.current) return;
-    if (mapInstanceRef.current) return; // 避免重複初始化
+    if (mapInstanceRef.current) return; // Critical: 避免 React Strict Mode 導致重複初始化
 
     try {
         const map = L.map(mapContainerRef.current, {
             center: [KYOTO_CENTER.lat, KYOTO_CENTER.lng],
             zoom: 13,
-            zoomControl: false, // 隱藏預設縮放控制項 (另外手動添加以調整位置)
+            zoomControl: false, // UI: 隱藏預設縮放，以便自定義位置
             attributionControl: false,
             dragging: true
         });
@@ -93,7 +99,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         console.error("Leaflet init error:", e);
     }
 
-    // 清理函式：組件卸載時銷毀地圖實例
+    // Cleanup: 組件卸載時銷毀地圖，防止記憶體洩漏與 DOM 殘留
     return () => {
         if (mapInstanceRef.current) {
             mapInstanceRef.current.remove();
@@ -102,55 +108,52 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     };
   }, []);
 
-  // 修復地圖渲染問題：
-  // 當 Tab 切換或地圖顯示時，容器可能正在進行動畫 (fade-in/slide)，導致地圖大小計算錯誤 (灰色區塊)。
-  // 使用 setTimeout 延遲呼叫 invalidateSize() 以確保容器大小已穩定。
+  // Effect 2: 解決 Resize/Render 問題 (Hack)
+  // 問題: 當地圖容器原本是 hidden (display:none) 後來變為 visible，
+  // Leaflet 無法正確讀取容器大小，導致地圖變成灰色一塊。
+  // 解法: 使用 invalidateSize() 強制重繪。
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (map) {
         const timer = setTimeout(() => {
             map.invalidateSize();
-        }, 200); // 200ms 延遲，配合 CSS transition 時間
+        }, 200); // 200ms 延遲，配合 CSS transition 動畫時間
         return () => clearTimeout(timer);
     }
-  }, []); // Add empty dependency array to run only on mount
+  }, []); 
 
-  // 當 items 更新時，重新繪製地點標記 (Markers)
+  // Effect 3: 渲染地點標記 (當 items 更新時)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // 清除舊標記
+    // 清除舊標記 (Performance: 避免標記無限疊加)
     itemMarkersRef.current.forEach(m => m.remove());
     itemMarkersRef.current = [];
 
-    // 計算邊界以自動縮放 (Fit Bounds)
+    // 用於計算邊界以自動縮放
     const bounds = L.latLngBounds([]);
 
-    // 過濾出有效的地點 (必須有座標和 Google Maps 連結)
+    // Filter Logic: 只顯示有效座標與有效連結的項目
     const validItems = items.filter(item => item.lat && item.lng && item.mapsUrl);
 
     validItems.forEach((item, index) => {
         const lat = item.lat!;
         const lng = item.lng!;
         
-        // 判斷標題 (Itinerary 用 location, 其他用 name)
         const rawTitle = (item as any).location || (item as any).name || '地點';
-        const title = escapeHtml(rawTitle); // XSS 防護
+        const title = escapeHtml(rawTitle); // XSS
         
-        // 取得該類別的顏色與圖示
         const style = getItemStyle(item);
-        const typeLabel = escapeHtml(style.typeLabel); // XSS 防護
+        const typeLabel = escapeHtml(style.typeLabel); 
         
-        // 判斷顯示內容：
-        // 如果是行程項目 (有 day 屬性)，顯示「數字序號」以便對照時間順序
-        // 如果是口袋名單 (餐廳/景點)，顯示「圖示」以便直觀識別類別
+        // UI Logic: 行程顯示數字，其餘顯示 Icon
         const isItinerary = (item as any).day !== undefined;
         const content = isItinerary ? (index + 1).toString() : style.icon;
         const fontSize = isItinerary ? '12px' : '14px';
 
-        // 自訂標記樣式 (水滴狀 + 內容)
-        // 使用 L.divIcon 允許我們用 HTML/CSS 自定義 Marker 外觀
+        // Advanced Leaflet: 使用 L.divIcon 進行完全自定義的 Marker 樣式
+        // 這比替換 iconUrl 更有彈性，可以使用 CSS3 變形與陰影
         const markerIcon = L.divIcon({
             className: 'custom-map-marker',
             html: `
@@ -172,7 +175,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
               </div>
             `,
             iconSize: [28, 28],
-            iconAnchor: [14, 28], // 錨點設為水滴尖端
+            iconAnchor: [14, 28], // 錨點設為水滴尖端 (重要：否則縮放時位置會跑掉)
             popupAnchor: [0, -28]
         });
 
@@ -196,7 +199,8 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         bounds.extend([userLocation.lat, userLocation.lng]);
     }
 
-    // 自動縮放邏輯：僅在尚未手動聚焦且尚未執行過自動縮放時觸發
+    // UX Logic: 自動縮放 (Auto-Fit)
+    // 規則：只在「尚未手動聚焦」且「地圖剛載入」時執行一次，避免干擾使用者操作
     if (!focusedLocation && !hasFittedBounds.current) {
         if (itemMarkersRef.current.length > 0 || userLocation) {
             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
@@ -206,23 +210,24 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
 
   }, [items, userLocation]);
 
-  // 處理聚焦特效 (當使用者點擊列表中的地點時)
+  // Effect 4: 處理外部聚焦請求 (FlyTo)
   useEffect(() => {
       const map = mapInstanceRef.current;
       if (!map || !focusedLocation) return;
 
       map.flyTo([focusedLocation.lat, focusedLocation.lng], 16, {
           animate: true,
-          duration: 1.5 // 平滑飛行時間
+          duration: 1.5 // Smooth animation duration
       });
 
   }, [focusedLocation]);
 
-  // 更新使用者位置標記 (藍點 + 脈衝動畫)
+  // Effect 5: 使用者位置標記 (帶動畫)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !userLocation) return;
     
+    // CSS3 Animation implementation inside SVG/HTML
     const userIcon = L.divIcon({
         className: 'user-location-marker',
         html: `
@@ -254,7 +259,9 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     }
   }, [userLocation]);
 
-  // 阻止事件冒泡：防止在地圖上操作時觸發父層的拖曳捲動
+  // Event Handling: 阻止事件冒泡 (Stop Propagation)
+  // 重要：因為外層有 useDraggableScroll，如果不在這裡阻止冒泡，
+  // 拖曳地圖時會同時觸發頁面捲動，導致體驗極差。
   const stopPropagation = (e: React.SyntheticEvent | React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
   };
@@ -265,7 +272,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
         ref={mapContainerRef} 
         className="w-full h-full z-0 relative"
         style={{background: '#f5f5f5'}} 
-        // 攔截滑鼠和觸控事件
+        // Bind stop propagation handlers
         onMouseDown={stopPropagation}
         onTouchStart={stopPropagation}
       />

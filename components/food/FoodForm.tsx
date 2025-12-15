@@ -11,19 +11,31 @@ interface Props {
   onClose: () => void;
   title: string;
   initialData: Partial<Restaurant>;
-  availableTags: string[];
+  availableTags: string[]; // 所有已存在的標籤 (用於建議)
   onSave: (data: Partial<Restaurant>) => Promise<void>;
 }
 
+/**
+ * 餐廳編輯表單 (FoodForm)
+ * 
+ * 主要邏輯：
+ * 1. 座標處理策略：
+ *    - 優先解析 Google Maps URL (精準度最高)
+ *    - 若無 URL，則使用名稱進行 OpenStreetMap 搜尋 (Fallback)
+ * 2. 標籤系統：
+ *    - 支援選擇現有標籤
+ *    - 支援新增自訂標籤
+ * 3. 圖片處理：支援剪貼簿貼上
+ */
 export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData, availableTags, onSave }) => {
   const [form, setForm] = useState<Partial<Restaurant>>(initialData);
   const [customTagInput, setCustomTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Hook for image logic
+  // 自訂 Hook：處理圖片上傳/貼上/壓縮
   const { fileInputRef, handleImageUpload, triggerUpload, handlePaste, handleClipboardRead } = useImageUpload();
 
-  // Reset form when opening
+  // Effect: Modal 開啟時重置狀態
   useEffect(() => {
     if (isOpen) {
       setForm(initialData);
@@ -32,7 +44,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
     }
   }, [isOpen, initialData]);
 
-  // Paste listener
+  // Effect: 監聽全域貼上事件 (圖片貼上功能)
   useEffect(() => {
     if (!isOpen) return;
     const onPaste = (e: ClipboardEvent) => {
@@ -42,6 +54,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
     return () => window.removeEventListener('paste', onPaste);
   }, [isOpen, handlePaste]);
 
+  // 標籤切換邏輯
   const toggleTag = (tag: string) => {
       const currentTags = form.tags || [];
       if (currentTags.includes(tag)) {
@@ -51,6 +64,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
       }
   };
 
+  // 新增自訂標籤
   const addCustomTag = () => {
       if (customTagInput && !form.tags?.includes(customTagInput)) {
           setForm({ ...form, tags: [...(form.tags || []), customTagInput] });
@@ -58,6 +72,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
       }
   };
 
+  // 提交處理：核心商業邏輯 (座標解析)
   const handleConfirm = async () => {
     if (!form.name) return;
     
@@ -66,7 +81,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
     let lat = form.lat;
     let lng = form.lng;
 
-    // 1. Try URL parse
+    // 策略 1: 嘗試從 Google Maps URL 解析
     if (form.mapsUrl) {
         const coords = parseCoordinatesFromUrl(form.mapsUrl);
         if (coords) {
@@ -75,7 +90,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
         }
     }
 
-    // 2. Fallback: Search by name if coords are missing
+    // 策略 2: 若沒有座標，則嘗試用名稱搜尋 (使用 OpenStreetMap Nominatim)
     if ((!lat || !lng) && form.name) {
          const searchResult = await searchLocationByName(form.name);
          if (searchResult) {
@@ -99,7 +114,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
       isSubmitting={isSubmitting}
       confirmDisabled={!form.name || isSubmitting}
     >
-      {/* Image Upload Area */}
+      {/* 圖片上傳區塊 */}
       <div className="relative w-full mb-6">
           <div onClick={triggerUpload} className="w-full h-32 rounded-xl bg-stone-100 border border-dashed border-stone-300 flex items-center justify-center cursor-pointer hover:bg-stone-100 overflow-hidden relative active-bounce transition-transform">
               {form.imageUrl ? (
@@ -109,7 +124,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
               )}
               <input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, (base64) => setForm({...form, imageUrl: base64}))} accept="image/*,image/heic,image/heif" hidden />
           </div>
-           {/* Paste Button */}
+           {/* 貼上按鈕 (手機版專用) */}
           <button
               type="button"
               onClick={(e) => {
@@ -125,10 +140,11 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
 
       <div className="space-y-6">
           <input className="w-full p-3 bg-stone-50 rounded-lg border border-stone-200 focus:outline-none focus:border-wafu-indigo text-lg font-bold font-serif" placeholder="餐廳名稱" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+          
+          {/* 標籤管理區 */}
           <div>
               <label className="text-xs text-stone-400 font-bold uppercase mb-2 block">標籤</label>
               <div className="flex flex-wrap gap-2 mb-3">
-                  {/* Show available tags for selection */}
                   {availableTags.map(tag => (
                       <button key={tag} onClick={() => toggleTag(tag)} className={`px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-95 border ${form.tags?.includes(tag) ? 'bg-wafu-indigo text-white border-wafu-indigo' : 'bg-stone-50 text-stone-400 border-stone-200 hover:border-wafu-indigo/50'}`}>{tag}</button>
                   ))}
@@ -139,6 +155,7 @@ export const FoodForm: React.FC<Props> = ({ isOpen, onClose, title, initialData,
               </div>
           </div>
           
+          {/* 評分滑桿 (Range Slider) */}
           <div>
                <div className="flex justify-between items-center mb-2">
                   <label className="text-xs text-stone-400 font-bold uppercase">評分</label>

@@ -12,11 +12,21 @@ interface Props {
   onDelete: (id: string, e: React.MouseEvent) => void;
 }
 
+/**
+ * 餐廳卡片組件
+ * 
+ * 顯示邏輯：
+ * 1. 距離計算：若有 userLocation 且該餐廳有座標，即時計算直線距離並顯示。
+ * 2. 點擊互動：若有點位資料 (hasMap)，點擊卡片可觸發地圖聚焦 (onFocus)。
+ * 3. 圖片處理：若無圖片則顯示預設 Placeholder。
+ */
 export const FoodItemCard: React.FC<Props> = ({ item, userLocation, onFocus, onEdit, onDelete }) => {
+  // 計算距離 (若條件允許)
   const distanceStr = (userLocation && item.lat && item.lng && item.mapsUrl) 
     ? formatDistance(calculateDistance(userLocation.lat, userLocation.lng, item.lat, item.lng))
     : null;
   
+  // 判斷是否可定位
   const hasMap = item.lat && item.lng && item.mapsUrl;
 
   return (
@@ -24,6 +34,7 @@ export const FoodItemCard: React.FC<Props> = ({ item, userLocation, onFocus, onE
       onClick={() => hasMap && onFocus && onFocus(item.lat!, item.lng!)}
       className={`bg-white rounded-2xl shadow-washi border border-stone-100 overflow-hidden flex flex-col sm:flex-row group transition-all hover:shadow-luxury relative active:scale-[0.99] duration-200 animate-zoom-in ${hasMap ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
     >
+      {/* 左側圖片區 */}
       <div className="sm:w-32 h-40 sm:h-auto relative bg-stone-50">
           {item.imageUrl ? (
             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
@@ -33,10 +44,13 @@ export const FoodItemCard: React.FC<Props> = ({ item, userLocation, onFocus, onE
                 <span className="text-[10px] font-bold">無照片</span>
             </div>
           )}
+          {/* 評分 Badge */}
           <div className="absolute top-2 left-2 bg-white/90 backdrop-blur rounded px-2 py-0.5 text-xs font-bold text-wafu-gold shadow-sm flex items-center gap-1">
             <Icons.Star filled /> {item.rating.toFixed(1)}
           </div>
       </div>
+
+      {/* 右側內容區 */}
       <div className="p-4 flex-1 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-start">
@@ -55,6 +69,8 @@ export const FoodItemCard: React.FC<Props> = ({ item, userLocation, onFocus, onE
                     </button>
                 </div>
             </div>
+
+            {/* Tags & Distance */}
             <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
                 {distanceStr && (
                     <span className="text-[9px] bg-wafu-indigo/10 text-wafu-indigo px-2 py-0.5 rounded font-bold font-mono">

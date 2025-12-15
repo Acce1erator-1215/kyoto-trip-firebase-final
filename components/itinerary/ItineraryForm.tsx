@@ -9,23 +9,34 @@ import { Modal } from '../common/Modal';
 interface Props {
   mode: 'add' | 'edit' | 'closed';
   initialData: Partial<ItineraryItem>;
-  isTodo: boolean;
+  isTodo: boolean; // 是否為 Day 0 (待辦清單模式)
   onClose: () => void;
   onSave: (data: Partial<ItineraryItem>) => Promise<void>;
 }
 
+/**
+ * 行程/待辦事項表單 (ItineraryForm)
+ * 
+ * 邏輯分支：
+ * - 若 isTodo 為 true (Day 0)：隱藏日期、時間選擇，僅保留基本欄位。
+ * - 若 isTodo 為 false (Day 1-8)：顯示完整的日期、時間、分類選擇。
+ * 
+ * 地理定位邏輯：
+ * - 提交前會嘗試解析 Maps URL 或搜尋地點名稱，將經緯度寫入資料庫，
+ *   以便在地圖模式下顯示。
+ */
 export const ItineraryForm: React.FC<Props> = ({ mode, initialData, isTodo, onClose, onSave }) => {
   const [form, setForm] = useState<Partial<ItineraryItem>>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Reset form when initialData changes (e.g. opening modal)
+  // 重置表單狀態
   useEffect(() => {
     setForm(initialData);
   }, [initialData]);
 
   const { fileInputRef, handleImageUpload, triggerUpload, handlePaste, handleClipboardRead } = useImageUpload();
 
-  // Listen for paste events only when modal is open
+  // 監聽貼上事件 (僅在 Modal 開啟時)
   useEffect(() => {
     if (mode === 'closed') return;
     const onPaste = (e: ClipboardEvent) => {
@@ -42,13 +53,13 @@ export const ItineraryForm: React.FC<Props> = ({ mode, initialData, isTodo, onCl
     let lat = form.lat;
     let lng = form.lng;
     
-    // 1. Try URL parse
+    // 1. 嘗試從 URL 解析座標
     if (form.mapsUrl) {
         const coords = parseCoordinatesFromUrl(form.mapsUrl);
         if (coords) { lat = coords.lat; lng = coords.lng; }
     }
 
-    // 2. Fallback search
+    // 2. Fallback: 線上搜尋名稱 (僅在有網路時)
     if ((!lat || !lng) && form.location) {
          if (navigator.onLine) {
             const searchResult = await searchLocationByName(form.location);
@@ -69,7 +80,7 @@ export const ItineraryForm: React.FC<Props> = ({ mode, initialData, isTodo, onCl
         isSubmitting={isSubmitting}
         confirmDisabled={!form.location}
       >
-        {/* Image Upload Area */}
+        {/* 圖片上傳區 */}
         <div className="relative w-full mb-4">
             <div 
               onClick={triggerUpload} 
@@ -88,6 +99,7 @@ export const ItineraryForm: React.FC<Props> = ({ mode, initialData, isTodo, onCl
                   hidden 
                 />
             </div>
+            {/* 手機版貼上按鈕 */}
             <button
                 type="button"
                 onClick={(e) => {
@@ -101,7 +113,7 @@ export const ItineraryForm: React.FC<Props> = ({ mode, initialData, isTodo, onCl
             </button>
         </div>
 
-        {/* Date Selector (Hidden for Todo) */}
+        {/* 日期選擇 (僅非 Todo 模式顯示) */}
         {!isTodo && (
             <div className="mb-4">
                 <label className="text-[10px] text-stone-400 font-bold block mb-1.5 uppercase">日期</label>

@@ -53,6 +53,7 @@ export const ExpenseTracker: React.FC<Props> = ({
     setIsAdding(true);
   };
 
+  // Refactor: Pass category correctly
   const handleSave = (data: any) => {
     setIsAdding(false);
     (async () => {
@@ -64,7 +65,7 @@ export const ExpenseTracker: React.FC<Props> = ({
                 await db.collection('expenses').doc(newId).set(sanitizeData({
                     id: newId,
                     ...data,
-                    category: 'other',
+                    category: data.category || 'other', // Ensure category is saved
                     payer: 'Me',
                     deleted: false
                 }));

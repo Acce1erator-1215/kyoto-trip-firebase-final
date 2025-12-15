@@ -13,6 +13,14 @@ interface Props {
   onConfirm: (data: Partial<ShoppingItem>) => void;
 }
 
+/**
+ * 伴手禮編輯表單
+ * 
+ * 包含：
+ * 1. 圖片上傳/貼上
+ * 2. 口味選擇 (甜/鹹) - 用於列表篩選
+ * 3. 數量與價格輸入
+ */
 export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialData, onConfirm }) => {
   const [form, setForm] = useState<Partial<ShoppingItem>>(initialData);
   const { fileInputRef, handleImageUpload, triggerUpload, handlePaste, handleClipboardRead } = useImageUpload();
@@ -23,7 +31,7 @@ export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialD
     }
   }, [isOpen, initialData]);
 
-  // Paste listener
+  // 監聽圖片貼上事件
   useEffect(() => {
     if (!isOpen) return;
     const onPaste = (e: ClipboardEvent) => {
@@ -41,7 +49,7 @@ export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialD
         onConfirm={() => onConfirm(form)}
         confirmDisabled={!form.name}
     >
-        {/* Image Upload */}
+        {/* 圖片上傳區 */}
         <div className="relative w-full mb-6">
             <div 
                 onClick={triggerUpload}
@@ -63,6 +71,7 @@ export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialD
                     hidden 
                 />
             </div>
+            {/* 手機版貼上按鈕 */}
             <button
                 type="button"
                 onClick={(e) => {
@@ -84,7 +93,7 @@ export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialD
                 onChange={e => setForm({...form, name: e.target.value})}
             />
 
-            {/* Flavors */}
+            {/* 口味選擇 (Radio Group) */}
             <div className="flex gap-4">
                 <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
                     ${form.flavor === 'sweet' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>

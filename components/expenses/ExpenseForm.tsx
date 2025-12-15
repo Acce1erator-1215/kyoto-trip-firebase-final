@@ -1,26 +1,36 @@
 
 import React, { useState, useEffect } from 'react';
-import { Expense } from '../../types';
+import { Expense, CATEGORIES, Category } from '../../types';
 import { Modal } from '../common/Modal';
 
+// 表單資料介面定義
 interface ExpenseFormData {
     title: string;
     amountYen: number;
     quantity: number;
     date: string;
     notes: string;
-    category?: string;
+    category: string;
 }
 
 interface Props {
   isOpen: boolean;
-  editingId: string | null;
+  editingId: string | null; // 若為 null 代表新增模式，否則為編輯模式
   initialData: Partial<Expense>;
-  exchangeRate: number;
+  exchangeRate: number; // 當前匯率，用於計算機
   onClose: () => void;
   onSave: (data: ExpenseFormData) => void;
 }
 
+/**
+ * 支出表單組件 (ExpenseForm)
+ * 
+ * 特色功能：
+ * 1. 內建雙向匯率換算機 (Dual Currency Calculator)
+ * 2. 數量增減控制器
+ * 3. 貨幣單位切換 (JPY/TWD)
+ * 4. 類別選擇器
+ */
 export const ExpenseForm: React.FC<Props> = ({ 
     isOpen, 
     editingId, 
@@ -29,25 +39,28 @@ export const ExpenseForm: React.FC<Props> = ({
     onClose, 
     onSave 
 }) => {
+  // --- 表單狀態 ---
   const [title, setTitle] = useState('');
-  const [amountInput, setAmountInput] = useState<string>('');
+  const [amountInput, setAmountInput] = useState<string>(''); 
   const [currency, setCurrency] = useState<'JPY' | 'TWD'>('JPY'); 
   const [quantityInput, setQuantityInput] = useState<number>(1);
   const [dateInput, setDateInput] = useState<string>(new Date().toISOString().split('T')[0]);
   const [notesInput, setNotesInput] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<Category | string>('other');
 
-  // Calculator State
+  // --- 計算機狀態 (Calculator State) ---
   const [calcYen, setCalcYen] = useState<string>('');
   const [calcTwd, setCalcTwd] = useState<string>('');
-  const [lastEdited, setLastEdited] = useState<'yen' | 'twd'>('yen');
+  const [lastEdited, setLastEdited] = useState<'yen' | 'twd'>('yen'); 
 
-  // Load initial data and manage reset
+  // Effect: 初始化表單資料
   useEffect(() => {
     if (isOpen) {
         setTitle(initialData.title || '');
         setQuantityInput(initialData.quantity || 1);
         setDateInput(initialData.date || new Date().toISOString().split('T')[0]);
         setNotesInput(initialData.notes || '');
+        setSelectedCategory(initialData.category || 'other');
         setCurrency('JPY');
 
         if (initialData.amountYen) {
@@ -56,7 +69,6 @@ export const ExpenseForm: React.FC<Props> = ({
             setAmountInput(displayPrice);
             setCalcYen(displayPrice);
             
-            // Trigger auto-calc for TWD
             const num = parseFloat(displayPrice);
             if (!isNaN(num)) setCalcTwd(Math.round(num * exchangeRate).toString());
         } else {
@@ -65,14 +77,13 @@ export const ExpenseForm: React.FC<Props> = ({
             setCalcTwd('');
         }
     } else {
-        // Reset calculator when closed to prevent confusion on next open
         setCalcYen('');
         setCalcTwd('');
         setAmountInput('');
     }
   }, [isOpen, initialData, exchangeRate]);
 
-  // Calculator Logic
+  // Effect: 計算機連動
   useEffect(() => {
     if (lastEdited === 'yen' && calcYen) {
         const num = parseFloat(calcYen);
@@ -86,27 +97,17 @@ export const ExpenseForm: React.FC<Props> = ({
   const handleYenChange = (val: string) => {
     setLastEdited('yen');
     setCalcYen(val);
-    if (val === '') {
-        setCalcTwd(''); 
-        return;
-    }
+    if (val === '') { setCalcTwd(''); return; }
     const num = parseFloat(val);
-    if (!isNaN(num)) {
-        setCalcTwd(Math.round(num * exchangeRate).toString());
-    }
+    if (!isNaN(num)) { setCalcTwd(Math.round(num * exchangeRate).toString()); }
   };
 
   const handleTwdChange = (val: string) => {
     setLastEdited('twd');
     setCalcTwd(val);
-    if (val === '') {
-        setCalcYen('');
-        return;
-    }
+    if (val === '') { setCalcYen(''); return; }
     const num = parseFloat(val);
-    if (!isNaN(num)) {
-        setCalcYen(Math.round(num / exchangeRate).toString());
-    }
+    if (!isNaN(num)) { setCalcYen(Math.round(num / exchangeRate).toString()); }
   };
 
   const handleConfirm = () => {
@@ -132,7 +133,8 @@ export const ExpenseForm: React.FC<Props> = ({
         amountYen: finalAmountYen,
         quantity: quantityInput,
         date: dateInput,
-        notes: notesInput
+        notes: notesInput,
+        category: selectedCategory
     });
   };
 
@@ -145,7 +147,7 @@ export const ExpenseForm: React.FC<Props> = ({
         confirmDisabled={!amountInput || !title}
     >
         <div className="relative z-10 space-y-6">
-            {/* Calculator Widget */}
+            {/* Widget: 雙向匯率計算機 */}
             <div className="relative overflow-hidden bg-gradient-to-br from-wafu-darkIndigo to-wafu-indigo rounded-2xl p-4 text-white shadow-inner ring-1 ring-wafu-indigo/50">
                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")` }}></div>
                 <h3 className="text-[10px] text-wafu-goldLight mb-3 font-bold tracking-[0.2em] uppercase flex justify-between">
@@ -180,7 +182,7 @@ export const ExpenseForm: React.FC<Props> = ({
                 </div>
             </div>
 
-            {/* Form Fields */}
+            {/* 表單主要欄位區 */}
             <div className="flex flex-col gap-4">
                 <div className="flex gap-3">
                     <input 
@@ -200,6 +202,7 @@ export const ExpenseForm: React.FC<Props> = ({
 
                 <div className="flex gap-3">
                     <div className="flex-1 flex relative">
+                        {/* 金額輸入框 */}
                         <input 
                             type="number"
                             value={amountInput}
@@ -216,6 +219,7 @@ export const ExpenseForm: React.FC<Props> = ({
                         </button>
                     </div>
                     
+                    {/* 數量增減器 */}
                     <div className="flex items-center bg-stone-50 rounded-xl border border-stone-200 overflow-hidden shrink-0">
                         <button 
                             onClick={() => setQuantityInput(Math.max(1, quantityInput - 1))}
@@ -235,11 +239,28 @@ export const ExpenseForm: React.FC<Props> = ({
                     </div>
                 </div>
 
+                {/* 類別選擇器 */}
+                <div>
+                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-2 block">類別</label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {Object.entries(CATEGORIES).map(([key, val]) => (
+                            <button
+                                key={key}
+                                onClick={() => setSelectedCategory(key)}
+                                className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all active:scale-95 ${selectedCategory === key ? 'bg-wafu-indigo text-white border-wafu-indigo shadow-md' : 'bg-stone-50 text-stone-500 border-stone-200 hover:border-wafu-indigo/30'}`}
+                            >
+                                <span className="text-xl mb-1">{val.icon}</span>
+                                <span className="text-[10px] font-bold">{val.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <textarea 
                     value={notesInput}
                     onChange={(e) => setNotesInput(e.target.value)}
                     placeholder="備註..."
-                    className="w-full p-3 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:border-wafu-indigo h-24 resize-none text-base"
+                    className="w-full p-3 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:border-wafu-indigo h-20 resize-none text-base"
                 />
             </div>
         </div>

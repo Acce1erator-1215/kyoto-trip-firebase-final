@@ -20,16 +20,29 @@ import { useExchangeRate } from '../hooks/useExchangeRate';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useSakuraAnimation } from '../hooks/useSakuraAnimation';
 
+/**
+ * App Root Component
+ * 
+ * 架構說明 (Architecture):
+ * 這是一個單頁應用 (SPA)，採用 "Lifted State" 模式。
+ * 所有的核心資料 (User Location, Firestore Data, UI State) 都在此層級管理，
+ * 並透過 Props 向下傳遞。對於中小型應用，這比引入 Redux/Zustand 更輕量且直觀。
+ */
 export default function App() {
+  // --- UI State Management ---
   const [activeTab, setActiveTab] = useState<Tab>('itinerary'); 
   const [selectedDay, setSelectedDay] = useState<number>(1); 
   const [showMap, setShowMap] = useState<boolean>(true); 
+  // 用於控制地圖聚焦的狀態，當使用者點擊列表項目時觸發
   const [focusedLocation, setFocusedLocation] = useState<{lat: number, lng: number} | null>(null); 
   
+  // --- Custom Hooks (Logic Separation) ---
+  // 將複雜的邏輯抽離至 hooks 目錄，保持 App.tsx 乾淨
   const { userLocation } = useGeolocation(); 
   const { currentRate, refresh: refreshRate, isLoading: isRateLoading, lastUpdated: rateLastUpdated } = useExchangeRate(); 
   const { isSpinning, sakuraPetals, triggerSakura } = useSakuraAnimation(); 
   
+  // 資料層：統一從 Firestore Hook 獲取所有集合的資料
   const { 
     itineraryItems, 
     expenses, 
@@ -39,25 +52,32 @@ export default function App() {
     dbError 
   } = useFirestoreData(); 
 
+  // UX 優化：讓桌面版也能像手機一樣拖曳捲動
   const mainContentDrag = useDraggableScroll({ direction: 'vertical' });
 
+  // --- Performance Optimization (useMemo) ---
+  // 效能關鍵點：這裡使用 useMemo 非常重要。
+  // 若不使用，每次 App re-render (例如 sakura 動畫更新、地圖切換) 都會導致
+  // 陣列重新 filter 和 sort，這在大資料量下會造成卡頓。
   const currentDayItems = useMemo(() => {
     return itineraryItems
       .filter(i => i.day === selectedDay && !i.deleted) 
       .sort((a, b) => {
         if (!a.time) return 1;
         if (!b.time) return -1;
-        return a.time.localeCompare(b.time);
+        return a.time.localeCompare(b.time); // 字串時間排序 "09:00" vs "10:00"
       });
-  }, [itineraryItems, selectedDay]);
+  }, [itineraryItems, selectedDay]); // 依賴項：只有當總行程或選擇天數改變時才重新計算
 
   const currentDayDeletedItems = useMemo(() => {
     return itineraryItems.filter(i => i.day === selectedDay && i.deleted);
   }, [itineraryItems, selectedDay]);
   
+  // --- Handlers ---
   const handleFocus = (lat: number, lng: number) => {
       if (!showMap) setShowMap(true);
       setFocusedLocation({ lat, lng });
+      // UX: 點擊地點後，自動捲動回頂部以便查看地圖
       if (mainContentDrag.ref.current) {
           mainContentDrag.ref.current.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -76,9 +96,11 @@ export default function App() {
   };
 
   return (
+    // Layout Strategy: 使用 fixed inset-0 鎖定整個視窗，避免瀏覽器原生的回彈效果 (Rubber-band effect)
+    // 內容捲動由內部的 div (mainContentDrag) 處理
     <div className="fixed inset-0 w-full h-[100dvh] bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
-      {/* 資料庫錯誤提示 (通常是權限問題) */}
+      {/* Error Boundary UI: 處理資料庫權限錯誤 */}
       {dbError && (
         <div className="fixed inset-0 z-[20000] bg-black/80 flex flex-col items-center justify-center text-white p-8 text-center backdrop-blur-md">
             <div className="text-4xl mb-4">⚠️</div>
@@ -87,20 +109,23 @@ export default function App() {
         </div>
       )}
 
-      {/* 櫻花飄落特效層 */}
+      {/* Visual Effects: 獨立層級，不干擾主內容互動 */}
       <SakuraOverlay petals={sakuraPetals} />
 
-      {/* 頂部導航欄 */}
+      {/* Navigation: 頂部導航 */}
       <Header triggerSakura={triggerSakura} isSpinning={isSpinning} />
 
-      {/* 主要內容捲動區 */}
-      {/* 移除 select-none 允許文字選取，確保 touch 捲動順暢 */}
+      {/* Main Content Area */}
+      {/* 重要：overscroll-y-contain 防止捲動傳遞到 body */}
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 
         className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain ${mainContentDrag.className.replace('select-none', '')}`}
       >
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
+          
+          {/* --- Tab Logic: Conditional Rendering --- */}
+          {/* 這種寫法比 Router 更適合此類小型 App，因為狀態保留更簡單 */}
           
           {/* 1. 行程 Tab */}
           {activeTab === 'itinerary' && (
@@ -114,6 +139,7 @@ export default function App() {
                 onCenterUser={handleCenterOnUser} 
               />
 
+              {/* 地圖區塊：高度根據螢幕響應式調整 */}
               {showMap && (
                 <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
                    <MapComponent items={currentDayItems} userLocation={userLocation} focusedLocation={focusedLocation} />
@@ -203,7 +229,7 @@ export default function App() {
           
           {/* 6. 機票 Tab */}
           {activeTab === 'flight' && (
-             // Update padding to pb-28
+             // Padding fix: pb-28 預留底部導航欄的空間
              <div className="flex-1 pt-8 px-6 pb-28 bg-seigaiha">
                 <div className="max-w-3xl mx-auto w-full">
                   <div className="mb-8 border-b border-wafu-indigo/10 pb-4">
@@ -214,6 +240,7 @@ export default function App() {
                       </p>
                   </div>
                   
+                  {/* Flight Info Components */}
                   <h3 className="text-lg font-bold text-wafu-indigo mb-4 ml-2 flex items-center gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-gold-leaf shadow-[0_0_8px_rgba(191,164,111,0.6)]"></div>
                       <span className="tracking-widest">去程 (Outbound)</span>
