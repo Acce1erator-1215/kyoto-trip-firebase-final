@@ -17,7 +17,6 @@ export interface Petal {
 /**
  * 自訂 Hook: useSakuraAnimation
  * 用途：控制首頁的櫻花飄落互動特效
- * 優化：大幅減少粒子數量以適配行動裝置效能
  */
 export const useSakuraAnimation = () => {
   const [isSpinning, setIsSpinning] = useState(false); // 控制 Logo 旋轉動畫狀態
@@ -31,8 +30,8 @@ export const useSakuraAnimation = () => {
      setIsSpinning(true);
      setTimeout(() => setIsSpinning(false), 2500); 
 
-     // 1. 產生 60 片標準粉色花瓣 (原 200 片 -> 優化為 60 片)
-     const newPetals: Petal[] = Array.from({ length: 60 }).map((_, i) => ({
+     // 1. 產生 100 片標準粉色花瓣
+     const newPetals: Petal[] = Array.from({ length: 200 }).map((_, i) => ({
          id: Date.now() + i,
          type: 'petal',
          left: `${Math.random() * 100}%`,
@@ -40,12 +39,12 @@ export const useSakuraAnimation = () => {
          delay: `${Math.random() * 3}s`,        // 0~3秒內陸續出現
          size: Math.random() * 10 + 10,         // 10~24px 大小
          color: Math.random() > 0.6 ? 'text-pink-300' : 'text-pink-200',
-         swayX: `${(Math.random() - 0.5) * 150}px`, // 隨機左右搖擺幅度 (微調範圍)
+         swayX: `${(Math.random() - 0.5) * 200}px`, // 隨機左右搖擺幅度
          depthBlur: Math.random() > 0.7 ? 'blur-[1px]' : 'blur-[0px]' // 30% 機率模糊，製造景深
      }));
      
-     // 2. 產生 15 個金色花粉粒子 (原 30 個 -> 優化為 15 個)
-     const newParticles: Petal[] = Array.from({ length: 15 }).map((_, i) => ({
+     // 2. 產生 30 個金色花粉粒子 (增加華麗感)
+     const newParticles: Petal[] = Array.from({ length: 30 }).map((_, i) => ({
          id: Date.now() + 1000 + i,
          type: 'pollen',
          left: `${Math.random() * 100}%`,
@@ -53,7 +52,7 @@ export const useSakuraAnimation = () => {
          delay: `${Math.random() * 2}s`,
          size: Math.random() * 1 + 1, // 極小光點
          color: 'bg-wafu-gold',
-         swayX: `${(Math.random() - 0.5) * 80}px`,
+         swayX: `${(Math.random() - 0.5) * 100}px`,
          depthBlur: ''
      }));
 
