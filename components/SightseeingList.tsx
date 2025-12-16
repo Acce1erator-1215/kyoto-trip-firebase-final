@@ -152,7 +152,8 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">景點清單</h2>
       </div>
 
-      <div className="space-y-6">
+      {/* RWD Layout: 單欄 (Mobile) -> 雙欄 (Desktop) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {sortedItems.map(item => {
            const distanceStr = (userLocation && item.lat && item.lng && item.mapsUrl) 
               ? formatDistance(calculateDistance(userLocation.lat, userLocation.lng, item.lat, item.lng))
@@ -166,7 +167,7 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
              onClick={() => hasMap && onFocus && onFocus(item.lat!, item.lng!)}
              className={`bg-white rounded-2xl shadow-washi border border-stone-100 overflow-hidden flex flex-col sm:flex-row group transition-all hover:shadow-luxury relative animate-zoom-in ${hasMap ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
            >
-              <div className="sm:w-32 h-40 sm:h-auto relative bg-stone-50">
+              <div className="sm:w-32 h-40 sm:h-auto relative bg-stone-50 shrink-0">
                  {item.imageUrl ? (
                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                  ) : (
@@ -176,11 +177,11 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
                      </div>
                  )}
               </div>
-              <div className="p-4 flex-1 flex flex-col justify-between">
+              <div className="p-4 flex-1 flex flex-col justify-between min-w-0">
                  <div>
                     <div className="flex justify-between items-start">
-                        <h3 className="text-lg font-serif font-bold text-wafu-indigo">{item.name}</h3>
-                        <div className="flex gap-2">
+                        <h3 className="text-lg font-serif font-bold text-wafu-indigo truncate">{item.name}</h3>
+                        <div className="flex gap-2 shrink-0 ml-2">
                             {item.mapsUrl && (
                                 <a href={item.mapsUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-stone-400 hover:text-wafu-indigo transition-colors active-bounce p-1">
                                     <Icons.MapLink />
@@ -206,13 +207,15 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
               </div>
            </div>
         )})}
+      </div>
 
+      <div className="mt-6 space-y-6">
         <button onClick={openAdd} className="w-full py-4 border border-dashed border-wafu-indigo/20 rounded-2xl text-wafu-indigo/60 flex items-center justify-center gap-2 hover:bg-white hover:border-wafu-indigo/50 hover:text-wafu-indigo transition-all duration-100 active-bounce font-bold tracking-widest bg-white/40 font-serif">
-          <Icons.Plus /> 新增景點
+            <Icons.Plus /> 新增景點
         </button>
 
         {deletedItems.length > 0 && (
-          <div className="mt-8 px-2">
+          <div className="px-2">
              <button onClick={() => setShowTrash(!showTrash)} className="flex items-center gap-2 text-stone-400 hover:text-wafu-indigo text-xs font-bold uppercase tracking-wider mb-3 transition-colors active-bounce">
                 <Icons.Trash /><span>已刪除景點 ({deletedItems.length})</span>
              </button>

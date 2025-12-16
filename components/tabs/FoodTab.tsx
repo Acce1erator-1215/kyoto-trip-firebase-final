@@ -36,14 +36,16 @@ export const FoodTab: React.FC<Props> = ({
         geoError={geoError}
       />
 
+      {/* RWD Map Height */}
       {showMap && (
-        <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+        <div className="w-full h-48 sm:h-64 lg:h-96 xl:h-[450px] relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in transition-all duration-500">
           <MapComponent items={items} userLocation={userLocation} focusedLocation={focusedLocation} />
         </div>
       )}
 
+      {/* RWD Container Width */}
       <div className="pt-8 min-h-screen bg-seigaiha bg-fixed">
-        <div className="max-w-3xl mx-auto w-full">
+        <div className="max-w-3xl lg:max-w-6xl mx-auto w-full transition-all duration-500">
           <FoodList items={items} userLocation={userLocation} onFocus={onFocus} />
         </div>
       </div>

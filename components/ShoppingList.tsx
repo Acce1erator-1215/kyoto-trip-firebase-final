@@ -230,7 +230,8 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
           </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-10">
+      {/* RWD Grid: 2 cols -> 3 cols -> 4 cols -> 5 cols */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6 mb-10">
         {filteredItems.map(item => (
            <ShoppingItemCard 
              key={item.id}

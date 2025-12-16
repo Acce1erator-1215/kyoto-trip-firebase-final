@@ -57,16 +57,16 @@ export const ItineraryTab: React.FC<Props> = ({
         geoError={geoError}
       />
 
-      {/* 地圖組件 */}
+      {/* 地圖組件 - RWD Height: h-48 (Mobile) -> h-64 (Tablet) -> h-96 (Desktop) */}
       {showMap && (
-        <div className="w-full h-48 sm:h-56 lg:h-72 relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in">
+        <div className="w-full h-48 sm:h-64 lg:h-96 xl:h-[450px] relative z-0 border-b border-wafu-indigo/10 shadow-inner animate-fade-in transition-all duration-500">
           <MapComponent items={currentDayItems} userLocation={userLocation} focusedLocation={focusedLocation} />
         </div>
       )}
 
-      {/* 行程列表 */}
+      {/* 行程列表 - Container width increased for desktop */}
       <div className="flex-1 pt-6 pb-32 bg-seigaiha bg-fixed bg-top">
-        <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl mx-auto w-full">
+        <div key={selectedDay} className="animate-fade-in-up-gentle max-w-3xl lg:max-w-4xl mx-auto w-full">
           <Itinerary
             dayIndex={selectedDay}
             items={currentDayItems}

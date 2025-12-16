@@ -168,7 +168,8 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
          ))}
       </div>
 
-      <div className="space-y-6">
+      {/* RWD Layout: Grid for Desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {sortedItems.map(item => (
            <FoodItemCard 
              key={item.id}
@@ -179,13 +180,15 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
              onDelete={handleDelete}
            />
         ))}
+      </div>
 
+      <div className="mt-6 space-y-6">
         <button onClick={openAdd} className="w-full py-4 border border-dashed border-wafu-indigo/20 rounded-2xl text-wafu-indigo/60 flex items-center justify-center gap-2 hover:bg-white hover:border-wafu-indigo/50 hover:text-wafu-indigo transition-all duration-100 active-bounce font-bold tracking-widest bg-white/40 font-serif">
           <Icons.Plus /> 新增餐廳
         </button>
 
         {deletedItems.length > 0 && (
-          <div className="mt-8 px-2">
+          <div className="px-2">
              <button onClick={() => setShowTrash(!showTrash)} className="flex items-center gap-2 text-stone-400 hover:text-wafu-indigo text-xs font-bold uppercase tracking-wider mb-3 transition-colors active-bounce">
                 <Icons.Trash /><span>已刪除餐廳 ({deletedItems.length})</span>
              </button>

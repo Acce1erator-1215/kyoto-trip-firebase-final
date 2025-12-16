@@ -121,7 +121,8 @@ export const ExpenseTracker: React.FC<Props> = ({
         rateLastUpdated={rateLastUpdated}
       />
 
-      <div className="space-y-3 mb-8">
+      {/* RWD Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         {activeExpenses.map(ex => (
           <ExpenseItemCard 
             key={ex.id}
@@ -132,15 +133,16 @@ export const ExpenseTracker: React.FC<Props> = ({
             onQuantityUpdate={updateExpenseQuantity}
           />
         ))}
+      </div>
 
-        <button 
+      <button 
           onClick={openAdd}
           className="w-full py-4 border border-dashed border-wafu-indigo/20 rounded-2xl text-wafu-indigo/60 flex items-center justify-center gap-2 hover:bg-white hover:border-wafu-indigo/50 hover:text-wafu-indigo transition-all duration-100 active-bounce font-bold tracking-widest bg-white/40 font-serif"
         >
           <Icons.Plus /> 新增支出
-        </button>
+      </button>
 
-        {deletedExpenses.length > 0 && (
+      {deletedExpenses.length > 0 && (
           <div className="mt-8 px-2">
              <button 
                onClick={() => setShowTrash(!showTrash)}
@@ -164,8 +166,7 @@ export const ExpenseTracker: React.FC<Props> = ({
                </div>
              )}
           </div>
-        )}
-      </div>
+      )}
 
       <ExpenseForm 
         isOpen={isAdding}

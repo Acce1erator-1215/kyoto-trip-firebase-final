@@ -7,7 +7,7 @@ import { Header } from './Header';
 // Context
 import { ToastProvider, useToast } from '../context/ToastContext';
 
-// Tabs
+// Tabs (Modular Components with RWD built-in)
 import { ItineraryTab } from './tabs/ItineraryTab';
 import { SightseeingTab } from './tabs/SightseeingTab';
 import { FoodTab } from './tabs/FoodTab';

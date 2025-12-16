@@ -31,7 +31,8 @@ export const Header: React.FC<HeaderProps> = ({ triggerSakura, isSpinning }) => 
       {/* 頂部金色裝飾線 */}
       <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-wafu-gold/20 via-wafu-gold to-wafu-gold/20"></div>
 
-      <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
+      {/* RWD Optimization: max-w-7xl to match content width on desktop */}
+      <div className="flex justify-between items-center max-w-7xl mx-auto w-full">
         {/* 左側：Logo 與 標題 (點擊觸發櫻花) */}
         <div className="flex items-center gap-4 cursor-pointer active-bounce group" onClick={triggerSakura}>
           <div className={`w-12 h-12 relative shrink-0 text-wafu-indigo filter drop-shadow-sm group-hover:drop-shadow-md transition-all ${isSpinning ? 'animate-jump-spin' : ''}`}>

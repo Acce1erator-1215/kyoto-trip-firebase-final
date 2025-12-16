@@ -21,7 +21,9 @@ export const DateSelector: React.FC<DateSelectorProps> = ({ selectedDay, setSele
       <div 
         ref={scrollLogic.ref}
         {...scrollLogic.events}
-        className={`flex overflow-x-auto gap-3 px-5 pb-1 ${scrollLogic.className}`}
+        // md:justify-center: 在平板/電腦上置中顯示，更美觀
+        // max-w-7xl mx-auto: 限制最大寬度
+        className={`flex overflow-x-auto gap-3 px-5 pb-1 md:justify-center max-w-7xl mx-auto ${scrollLogic.className}`}
       >
         <button
           type="button"
