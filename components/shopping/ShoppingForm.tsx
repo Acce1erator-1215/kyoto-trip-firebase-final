@@ -18,7 +18,7 @@ interface Props {
  * 
  * 包含：
  * 1. 圖片上傳/貼上
- * 2. 口味選擇 (甜/鹹) - 用於列表篩選
+ * 2. 口味選擇 (甜/鹹/雜) - 用於列表篩選
  * 3. 數量與價格輸入
  */
 export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialData, onConfirm }) => {
@@ -93,9 +93,9 @@ export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialD
                 onChange={e => setForm({...form, name: e.target.value})}
             />
 
-            {/* 口味選擇 (Radio Group) */}
-            <div className="flex gap-4">
-                <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
+            {/* 口味/類別選擇 (Radio Group) */}
+            <div className="flex gap-2 sm:gap-4">
+                <label className={`flex-1 p-2 sm:p-3 rounded-xl border flex items-center justify-center gap-1 sm:gap-2 cursor-pointer transition-all active-bounce
                     ${form.flavor === 'sweet' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
                     <input 
                         type="radio" 
@@ -104,9 +104,9 @@ export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialD
                         checked={form.flavor === 'sweet'} 
                         onChange={() => setForm({...form, flavor: 'sweet'})} 
                     />
-                    <span className="text-sm font-bold">甜食 🍰</span>
+                    <span className="text-xs sm:text-sm font-bold">甜食 🍰</span>
                 </label>
-                <label className={`flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all active-bounce
+                <label className={`flex-1 p-2 sm:p-3 rounded-xl border flex items-center justify-center gap-1 sm:gap-2 cursor-pointer transition-all active-bounce
                     ${form.flavor === 'salty' ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
                     <input 
                         type="radio" 
@@ -115,7 +115,18 @@ export const ShoppingForm: React.FC<Props> = ({ isOpen, onClose, title, initialD
                         checked={form.flavor === 'salty'} 
                         onChange={() => setForm({...form, flavor: 'salty'})} 
                     />
-                    <span className="text-sm font-bold">鹹食 🍘</span>
+                    <span className="text-xs sm:text-sm font-bold">鹹食 🍘</span>
+                </label>
+                <label className={`flex-1 p-2 sm:p-3 rounded-xl border flex items-center justify-center gap-1 sm:gap-2 cursor-pointer transition-all active-bounce
+                    ${form.flavor === 'misc' ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-stone-50 border-stone-200 text-stone-400'}`}>
+                    <input 
+                        type="radio" 
+                        name="flavor" 
+                        className="hidden" 
+                        checked={form.flavor === 'misc'} 
+                        onChange={() => setForm({...form, flavor: 'misc'})} 
+                    />
+                    <span className="text-xs sm:text-sm font-bold">雜貨 📦</span>
                 </label>
             </div>
             

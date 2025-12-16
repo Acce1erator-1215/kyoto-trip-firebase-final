@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Restaurant } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-// Removed v9 modular imports
+import { useToast } from '../context/ToastContext';
 import { useDraggableScroll } from '../hooks/useDraggableScroll';
 import { FoodItemCard } from './food/FoodItemCard';
 import { FoodForm } from './food/FoodForm';
@@ -18,11 +18,11 @@ interface Props {
 const PREDEFINED_TAGS = ['拉麵', '甜點', '咖哩', '燒肉', '火鍋', '大阪燒', '壽司', '咖啡'];
 
 export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
+  const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Multi-select state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<Partial<Restaurant>>({
@@ -36,13 +36,11 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
     lng: undefined
   });
 
-  // Calculate all used tags for filter/form suggestions
   const allUsedTags = Array.from(new Set([
       ...PREDEFINED_TAGS,
       ...items.flatMap(i => i.tags || [])
   ]));
 
-  // Draggable scroll for tags
   const scrollLogic = useDraggableScroll({ direction: 'horizontal' });
 
   const activeItems = items.filter(i => !i.deleted);
@@ -52,25 +50,18 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
     ? activeItems 
     : activeItems.filter(i => i.tags?.some(tag => activeTagFilters.includes(tag)));
 
-  // 依距離排序邏輯
   const sortedItems = useMemo(() => {
     if (!userLocation) return filteredItems;
 
     return [...filteredItems].sort((a, b) => {
-      // 若有座標則計算距離，否則視為無限遠
       const distA = (a.lat && a.lng) ? calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) : Infinity;
       const distB = (b.lat && b.lng) ? calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng) : Infinity;
       
-      // 兩者都有距離：由近到遠
       if (distA !== Infinity && distB !== Infinity) {
         return distA - distB;
       }
-      
-      // 其中一個有距離：有距離的排前面
       if (distA !== Infinity) return -1;
       if (distB !== Infinity) return 1;
-
-      // 都沒有距離：維持原順序
       return 0;
     });
   }, [filteredItems, userLocation]);
@@ -107,6 +98,7 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
         if (editingId) {
             const cleanData = sanitizeData(finalData);
             await db.collection('restaurants').doc(editingId).update(cleanData);
+            showToast("餐廳資訊已更新", "success");
         } else {
             const newId = Date.now().toString();
             const item = {
@@ -123,34 +115,37 @@ export const FoodList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
             };
             const cleanItem = sanitizeData(item);
             await db.collection('restaurants').doc(newId).set(cleanItem);
+            showToast("餐廳新增成功", "success");
         }
         setIsAdding(false);
     } catch (err) {
         console.error("Error saving restaurant:", err);
+        showToast("儲存失敗", "error");
     }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await db.collection('restaurants').doc(id).update({ deleted: true });
+    showToast("已移至回收桶", "info");
   };
 
   const handleRestore = async (id: string) => {
     await db.collection('restaurants').doc(id).update({ deleted: false });
+    showToast("餐廳已復原", "success");
   };
 
   const handlePermanentDelete = async (id: string) => {
     await db.collection('restaurants').doc(id).delete();
+    showToast("餐廳永久刪除", "success");
   };
 
   return (
-    // Update padding to pb-28
     <div className="pb-28 px-5">
       <div className="mb-4 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">美食清單</h2>
       </div>
 
-      {/* Tag Filters */}
       <div 
         ref={scrollLogic.ref}
         {...scrollLogic.events}

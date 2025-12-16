@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icons } from './Icon';
 
 interface HeaderProps {
@@ -9,13 +9,23 @@ interface HeaderProps {
 
 /**
  * 頁面頂部 Header 組件
- * 包含：應用程式標題、櫻花特效觸發器、VJW 外部連結
- * 
- * iOS 適配重點：
- * 使用 pt-[calc(env(safe-area-inset-top)+0.75rem)] 
- * 確保標題不會被 iPhone 的瀏海 (Notch) 或動態島 (Dynamic Island) 遮擋
  */
 export const Header: React.FC<HeaderProps> = ({ triggerSakura, isSpinning }) => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <div className="relative z-30 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 px-5 bg-wafu-bg/85 backdrop-blur-xl border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.02)] shrink-0 transition-all duration-300">
       {/* 頂部金色裝飾線 */}
@@ -26,9 +36,22 @@ export const Header: React.FC<HeaderProps> = ({ triggerSakura, isSpinning }) => 
         <div className="flex items-center gap-4 cursor-pointer active-bounce group" onClick={triggerSakura}>
           <div className={`w-12 h-12 relative shrink-0 text-wafu-indigo filter drop-shadow-sm group-hover:drop-shadow-md transition-all ${isSpinning ? 'animate-jump-spin' : ''}`}>
               <Icons.Sakura />
+              {/* 離線狀態指示燈 */}
+              {!isOnline && (
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-stone-500 rounded-full border-2 border-white flex items-center justify-center shadow-sm">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                  </div>
+              )}
           </div>
           <div>
-            <h1 className="text-2xl font-serif font-black text-wafu-indigo tracking-[0.2em] leading-none text-gold-leaf mb-1 drop-shadow-sm">京都八日遊</h1>
+            <h1 className="text-2xl font-serif font-black text-wafu-indigo tracking-[0.2em] leading-none text-gold-leaf mb-1 drop-shadow-sm flex items-center gap-2">
+                京都八日遊
+                {!isOnline && (
+                    <span className="text-[10px] bg-stone-200 text-stone-500 px-1.5 py-0.5 rounded font-bold tracking-normal border border-stone-300">
+                        OFFLINE
+                    </span>
+                )}
+            </h1>
             <p className="text-[14px] text-wafu-gold font-bold tracking-[0.4em] uppercase opacity-90 pl-0.5 font-serif">Kyoto Journey</p>
           </div>
         </div>

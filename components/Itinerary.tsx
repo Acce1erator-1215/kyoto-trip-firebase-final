@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ItineraryItem, Category, DATES } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
+import { useToast } from '../context/ToastContext'; // Import useToast
 // Removed v9 modular imports
 import { ItineraryItemCard } from './itinerary/ItineraryItemCard';
 import { ItineraryForm } from './itinerary/ItineraryForm';
@@ -16,15 +17,11 @@ interface ItineraryProps {
   onFocus?: (lat: number, lng: number) => void;       
 }
 
-/**
- * 行程列表組件
- */
 export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedItems = [], isTodo, userLocation, onFocus }) => {
-  // --- UI State ---
+  const { showToast } = useToast(); // Use Toast Hook
   const [modalMode, setModalMode] = useState<'closed' | 'add' | 'edit'>('closed');
   const [showTrash, setShowTrash] = useState(false);
   
-  // --- Form State ---
   const defaultFormState: Partial<ItineraryItem> = {
     day: dayIndex,
     category: 'sightseeing',
@@ -38,27 +35,17 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   };
   
   const [itemForm, setItemForm] = useState<Partial<ItineraryItem>>(defaultFormState);
-  
-  // --- Weather State ---
   const [weather, setWeather] = useState<{ temp: number; code: number; location: string } | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
 
-  // Logic: 根據天數與地點獲取天氣 (Open-Meteo API)
-  // Note: 依照需求還原為寫死的地點邏輯 (Hardcoded locations)
+  // Weather Logic
   const fetchWeather = useCallback(async () => {
-      // Day 0 是 Todo List，不需要天氣
-      if (dayIndex === 0) {
-          setWeather(null);
-          return;
-      }
-      // Offline Check
+      if (dayIndex === 0) { setWeather(null); return; }
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       
       setIsWeatherLoading(true);
       
-      // Strategy: Hardcoded main city for each day
-      let target = { lat: 35.0116, lng: 135.7681, name: '京都' }; // Default Kyoto
-
+      let target = { lat: 35.0116, lng: 135.7681, name: '京都' }; 
       if (dayIndex === 1) target = { lat: 34.6901, lng: 135.1955, name: '神戶' }; 
       if (dayIndex === 2) target = { lat: 34.8151, lng: 134.6853, name: '姬路' }; 
       if (dayIndex === 6) target = { lat: 34.7024, lng: 135.4959, name: '大阪' };
@@ -76,7 +63,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
               });
           }
       } catch (e) {
-          // Silent fail for weather
           setWeather(null);
       } finally {
           setIsWeatherLoading(false);
@@ -87,7 +73,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
     fetchWeather();
   }, [fetchWeather]);
 
-  // Helper: WMO Weather Code to Icon Mapping
   const getWeatherIcon = (code: number) => {
       if (code <= 1) return <Icons.Sun className="w-4 h-4 text-orange-400" filled />;
       if (code <= 3) return <Icons.Cloud className="w-4 h-4 text-stone-400" />;
@@ -100,25 +85,43 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
   // --- CRUD Operations ---
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    try { await db.collection('itinerary').doc(id).update({ deleted: true }); } 
-    catch (err) { console.error("Error deleting:", err); }
+    try { 
+        await db.collection('itinerary').doc(id).update({ deleted: true });
+        showToast("項目已移至回收桶", "info");
+    } 
+    catch (err) { 
+        console.error("Error deleting:", err);
+        showToast("刪除失敗", "error");
+    }
   };
 
   const handleRestore = async (id: string) => {
-    try { await db.collection('itinerary').doc(id).update({ deleted: false }); } 
-    catch (err) { console.error("Error restoring:", err); }
+    try { 
+        await db.collection('itinerary').doc(id).update({ deleted: false });
+        showToast("項目已復原", "success");
+    } 
+    catch (err) { 
+        console.error("Error restoring:", err);
+        showToast("復原失敗", "error");
+    }
   };
 
   const handlePermanentDelete = async (id: string) => {
-    try { await db.collection('itinerary').doc(id).delete(); } 
-    catch (err) { console.error("Error permanent deleting:", err); }
+    try { 
+        await db.collection('itinerary').doc(id).delete();
+        showToast("項目已永久刪除", "success");
+    } 
+    catch (err) { 
+        console.error("Error permanent deleting:", err);
+        showToast("刪除失敗", "error");
+    }
   };
 
   const toggleComplete = async (id: string, currentStatus: boolean) => {
     await db.collection('itinerary').doc(id).update({ completed: !currentStatus });
+    if (!currentStatus) showToast("恭喜完成！", "success");
   };
 
-  // --- Modal Handlers ---
   const handleOpenAdd = () => {
     setItemForm({ ...defaultFormState, day: dayIndex });
     setModalMode('add');
@@ -139,6 +142,7 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
     try {
       if (modalMode === 'edit' && formData.id) {
           await db.collection('itinerary').doc(formData.id).update(sanitizeData(finalData));
+          showToast("行程更新成功", "success");
       } else {
           const newItemId = Date.now().toString();
           const item: ItineraryItem = {
@@ -156,10 +160,12 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
               deleted: false
           };
           await db.collection('itinerary').doc(newItemId).set(sanitizeData(item));
+          showToast("行程新增成功", "success");
       }
       setModalMode('closed');
     } catch (err) {
       console.error("Error saving itinerary:", err);
+      showToast("儲存失敗，請檢查網路", "error");
     }
   };
 
@@ -167,14 +173,12 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
 
   return (
     <div className="pb-28"> 
-      {/* Header Section */}
       <div className="mb-6 px-6">
         <div className="flex justify-between items-start border-b border-wafu-indigo/10 pb-4">
           <div>
             <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight mb-2">
               {isTodo ? "行前準備" : `Day ${dayIndex}`}
             </h2>
-            {/* Weather Widget */}
             {!isTodo && weather && (
               <div className="flex items-center gap-2 text-sm text-wafu-text font-bold opacity-80 animate-fade-in cursor-pointer group" onClick={fetchWeather}>
                  {getWeatherIcon(weather.code)}
@@ -190,7 +194,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
             )}
           </div>
           
-          {/* Decorative Vertical Text */}
           {!isTodo && (
             <div className="writing-vertical text-right h-20 text-xs font-serif font-bold text-wafu-gold tracking-widest border-l border-wafu-indigo/20 pl-3 mt-[-0.5rem] z-0">
               {dayDate.replace(/-/g, '.')}
@@ -199,7 +202,6 @@ export const Itinerary: React.FC<ItineraryProps> = ({ dayIndex, items, deletedIt
         </div>
       </div>
 
-      {/* List Section */}
       <div className="space-y-6 px-3 sm:px-5 relative z-10">
         {!isTodo && items.length > 0 && (
            <div className="absolute left-[3.5rem] top-4 bottom-8 w-0.5 bg-gradient-to-b from-wafu-gold via-wafu-goldLight to-transparent z-0 opacity-50"></div>

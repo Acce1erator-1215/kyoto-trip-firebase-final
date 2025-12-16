@@ -50,7 +50,7 @@ export interface ShoppingItem {
   bought: boolean;     // 是否已購買
   quantity?: number;   // 購買數量
   linkedExpenseId?: string; // 關聯的支出 ID (當勾選「已購買」時自動產生支出，取消時自動刪除)
-  flavor?: 'sweet' | 'salty'; // 口味標籤：甜食或鹹食 (用於篩選)
+  flavor?: 'sweet' | 'salty' | 'misc'; // 口味標籤：甜食、鹹食、雜貨 (用於篩選)
   deleted?: boolean;   // 軟刪除標記
 }
 

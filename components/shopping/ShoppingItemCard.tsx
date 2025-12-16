@@ -50,12 +50,14 @@ export const ShoppingItemCard: React.FC<Props> = ({
                 <Icons.Check />
             </button>
             
-            {/* 口味標籤 */}
+            {/* 口味/類別標籤 */}
             {item.flavor && (
                 <div className={`absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold z-20 shadow-sm
-                    ${item.flavor === 'sweet' ? 'bg-pink-100/90 text-pink-700' : 'bg-orange-100/90 text-orange-700'}
+                    ${item.flavor === 'sweet' ? 'bg-pink-100/90 text-pink-700' : 
+                      item.flavor === 'salty' ? 'bg-orange-100/90 text-orange-700' : 
+                      'bg-teal-100/90 text-teal-700'}
                 `}>
-                    {item.flavor === 'sweet' ? '甜' : '鹹'}
+                    {item.flavor === 'sweet' ? '甜' : item.flavor === 'salty' ? '鹹' : '雜'}
                 </div>
             )}
         </div>

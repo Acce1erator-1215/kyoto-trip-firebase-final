@@ -6,6 +6,7 @@ interface MapControlsProps {
   showMap: boolean;
   setShowMap: (show: boolean) => void;
   userLocation: { lat: number, lng: number } | null;
+  geoError?: string | null;
   onCenterUser: () => void;
 }
 
@@ -17,6 +18,7 @@ export const MapControls: React.FC<MapControlsProps> = ({
   showMap, 
   setShowMap, 
   userLocation, 
+  geoError,
   onCenterUser 
 }) => {
   return (
@@ -30,14 +32,22 @@ export const MapControls: React.FC<MapControlsProps> = ({
         <span>{showMap ? "隱藏地圖" : "顯示地圖"}</span>
       </button>
 
-      {/* 定位按鈕 (僅在有地圖且有定位權限時顯示) */}
-      {showMap && userLocation && (
+      {/* 定位按鈕 (只要地圖開啟就顯示，方便使用者觸發權限請求或查看狀態) */}
+      {showMap && (
         <button 
           onClick={onCenterUser} 
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border bg-white text-wafu-indigo border-wafu-indigo/30 hover:border-wafu-indigo hover:bg-wafu-indigo/5"
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest shadow-sm transition-all active-bounce border 
+            ${userLocation 
+              ? 'bg-white text-wafu-indigo border-wafu-indigo/30 hover:border-wafu-indigo hover:bg-wafu-indigo/5' 
+              : geoError
+                ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
+                : 'bg-stone-100 text-stone-400 border-stone-200'
+            }`}
         >
-            <Icons.Navigation className="w-3 h-3" strokeWidth={2.5} />
-            <span>定位</span>
+            <Icons.Navigation className={`w-3 h-3 ${!userLocation && !geoError ? 'animate-pulse' : ''}`} strokeWidth={2.5} />
+            <span>
+                {userLocation ? '定位' : (geoError ? geoError : '定位中')}
+            </span>
         </button>
       )}
     </div>

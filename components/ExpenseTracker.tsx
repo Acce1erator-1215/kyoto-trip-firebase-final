@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Expense } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-// Removed v9 modular imports
+import { useToast } from '../context/ToastContext';
 import { ExpenseSummary } from './expenses/ExpenseSummary';
 import { ExpenseItemCard } from './expenses/ExpenseItemCard';
 import { ExpenseForm } from './expenses/ExpenseForm';
@@ -23,6 +23,7 @@ export const ExpenseTracker: React.FC<Props> = ({
   rateLastUpdated,
   isRateLoading
 }) => {
+  const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showTrash, setShowTrash] = useState(false);
@@ -32,13 +33,11 @@ export const ExpenseTracker: React.FC<Props> = ({
       setExchangeRate(currentRate);
   }, [currentRate]);
 
-  // Data processing
   const activeExpenses = expenses.filter(ex => !ex.deleted).sort((a,b) => b.date.localeCompare(a.date));
   const deletedExpenses = expenses.filter(ex => ex.deleted);
   const totalYen = activeExpenses.reduce((acc, curr) => acc + curr.amountYen, 0);
   const totalTwd = Math.round(totalYen * exchangeRate);
 
-  // Form Management
   const [formData, setFormData] = useState<Partial<Expense>>({});
 
   const openAdd = () => {
@@ -53,41 +52,45 @@ export const ExpenseTracker: React.FC<Props> = ({
     setIsAdding(true);
   };
 
-  // Refactor: Pass category correctly
   const handleSave = (data: any) => {
     setIsAdding(false);
     (async () => {
         try {
             if (editingId) {
                 await db.collection('expenses').doc(editingId).update(sanitizeData(data));
+                showToast("支出更新成功", "success");
             } else {
                 const newId = Date.now().toString();
                 await db.collection('expenses').doc(newId).set(sanitizeData({
                     id: newId,
                     ...data,
-                    category: data.category || 'other', // Ensure category is saved
+                    category: data.category || 'other',
                     payer: 'Me',
                     deleted: false
                 }));
+                showToast("支出新增成功", "success");
             }
         } catch (err) {
             console.error("Error saving expense:", err);
+            showToast("儲存失敗", "error");
         }
     })();
   };
 
-  // CRUD Operations
   const handleDelete = async (id: string, e: React.MouseEvent) => {
      e.stopPropagation();
      await db.collection('expenses').doc(id).update({ deleted: true });
+     showToast("已移至回收桶", "info");
   };
 
   const handleRestore = async (id: string) => {
      await db.collection('expenses').doc(id).update({ deleted: false });
+     showToast("支出已復原", "success");
   };
 
   const handlePermanentDelete = async (id: string) => {
      await db.collection('expenses').doc(id).delete();
+     showToast("支出永久刪除", "success");
   };
 
   const updateExpenseQuantity = async (id: string, delta: number, expense: Expense) => {
@@ -103,7 +106,6 @@ export const ExpenseTracker: React.FC<Props> = ({
   };
 
   return (
-    // Update padding to pb-28
     <div className="pb-28 px-5">
       <div className="mb-4 border-b border-wafu-indigo/10 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-tight">旅費帳本</h2>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Expense, CATEGORIES, Category } from '../../types';
 import { Modal } from '../common/Modal';
+import { useToast } from '../../context/ToastContext';
 
 // 表單資料介面定義
 interface ExpenseFormData {
@@ -15,22 +16,13 @@ interface ExpenseFormData {
 
 interface Props {
   isOpen: boolean;
-  editingId: string | null; // 若為 null 代表新增模式，否則為編輯模式
+  editingId: string | null; 
   initialData: Partial<Expense>;
-  exchangeRate: number; // 當前匯率，用於計算機
+  exchangeRate: number; 
   onClose: () => void;
   onSave: (data: ExpenseFormData) => void;
 }
 
-/**
- * 支出表單組件 (ExpenseForm)
- * 
- * 特色功能：
- * 1. 內建雙向匯率換算機 (Dual Currency Calculator)
- * 2. 數量增減控制器
- * 3. 貨幣單位切換 (JPY/TWD)
- * 4. 類別選擇器
- */
 export const ExpenseForm: React.FC<Props> = ({ 
     isOpen, 
     editingId, 
@@ -39,7 +31,7 @@ export const ExpenseForm: React.FC<Props> = ({
     onClose, 
     onSave 
 }) => {
-  // --- 表單狀態 ---
+  const { showToast } = useToast();
   const [title, setTitle] = useState('');
   const [amountInput, setAmountInput] = useState<string>(''); 
   const [currency, setCurrency] = useState<'JPY' | 'TWD'>('JPY'); 
@@ -48,12 +40,10 @@ export const ExpenseForm: React.FC<Props> = ({
   const [notesInput, setNotesInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | string>('other');
 
-  // --- 計算機狀態 (Calculator State) ---
   const [calcYen, setCalcYen] = useState<string>('');
   const [calcTwd, setCalcTwd] = useState<string>('');
   const [lastEdited, setLastEdited] = useState<'yen' | 'twd'>('yen'); 
 
-  // Effect: 初始化表單資料
   useEffect(() => {
     if (isOpen) {
         setTitle(initialData.title || '');
@@ -83,7 +73,6 @@ export const ExpenseForm: React.FC<Props> = ({
     }
   }, [isOpen, initialData, exchangeRate]);
 
-  // Effect: 計算機連動
   useEffect(() => {
     if (lastEdited === 'yen' && calcYen) {
         const num = parseFloat(calcYen);
@@ -114,7 +103,7 @@ export const ExpenseForm: React.FC<Props> = ({
     if (!amountInput || !title) return;
 
     if (currency === 'TWD' && (!exchangeRate || exchangeRate <= 0)) {
-        alert("無法獲取有效匯率，請檢查網路或改輸入日幣金額。");
+        showToast("無法獲取有效匯率，請改輸入日幣", "error");
         return;
     }
 
@@ -147,7 +136,6 @@ export const ExpenseForm: React.FC<Props> = ({
         confirmDisabled={!amountInput || !title}
     >
         <div className="relative z-10 space-y-6">
-            {/* Widget: 雙向匯率計算機 */}
             <div className="relative overflow-hidden bg-gradient-to-br from-wafu-darkIndigo to-wafu-indigo rounded-2xl p-4 text-white shadow-inner ring-1 ring-wafu-indigo/50">
                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")` }}></div>
                 <h3 className="text-[10px] text-wafu-goldLight mb-3 font-bold tracking-[0.2em] uppercase flex justify-between">
@@ -182,7 +170,6 @@ export const ExpenseForm: React.FC<Props> = ({
                 </div>
             </div>
 
-            {/* 表單主要欄位區 */}
             <div className="flex flex-col gap-4">
                 <div className="flex gap-3">
                     <input 
@@ -202,7 +189,6 @@ export const ExpenseForm: React.FC<Props> = ({
 
                 <div className="flex gap-3">
                     <div className="flex-1 flex relative">
-                        {/* 金額輸入框 */}
                         <input 
                             type="number"
                             value={amountInput}
@@ -219,7 +205,6 @@ export const ExpenseForm: React.FC<Props> = ({
                         </button>
                     </div>
                     
-                    {/* 數量增減器 */}
                     <div className="flex items-center bg-stone-50 rounded-xl border border-stone-200 overflow-hidden shrink-0">
                         <button 
                             onClick={() => setQuantityInput(Math.max(1, quantityInput - 1))}
@@ -239,7 +224,6 @@ export const ExpenseForm: React.FC<Props> = ({
                     </div>
                 </div>
 
-                {/* 類別選擇器 */}
                 <div>
                     <label className="text-[10px] text-stone-400 font-bold uppercase mb-2 block">類別</label>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">

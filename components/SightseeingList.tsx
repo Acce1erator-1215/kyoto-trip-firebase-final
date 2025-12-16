@@ -3,9 +3,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { SightseeingSpot } from '../types';
 import { Icons } from './Icon';
 import { db, sanitizeData } from '../firebase';
-// Removed v9 modular imports
+import { useToast } from '../context/ToastContext';
 import { calculateDistance, formatDistance, parseCoordinatesFromUrl, searchLocationByName } from '../services/geoUtils';
-import { useImageUpload } from '../hooks/useImageUpload'; // 引入圖片上傳 Hook
+import { useImageUpload } from '../hooks/useImageUpload'; 
 import { Modal } from './common/Modal';
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
 }
 
 export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus }) => {
+  const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,17 +30,13 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
     lng: undefined
   });
   
-  // 使用 hook 處理圖片邏輯 (含貼上)
   const { fileInputRef, handleImageUpload, triggerUpload, handlePaste, handleClipboardRead } = useImageUpload();
 
-  // 監聽貼上事件
   useEffect(() => {
     if (!isAdding) return;
-
     const onPaste = (e: ClipboardEvent) => {
         handlePaste(e, (base64) => setForm(prev => ({ ...prev, imageUrl: base64 })));
     };
-
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
   }, [isAdding, handlePaste]);
@@ -47,25 +44,18 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
   const activeItems = items.filter(i => !i.deleted);
   const deletedItems = items.filter(i => i.deleted);
 
-  // 依距離排序邏輯
   const sortedItems = useMemo(() => {
     if (!userLocation) return activeItems;
 
     return [...activeItems].sort((a, b) => {
-      // 若有座標則計算距離，否則視為無限遠
       const distA = (a.lat && a.lng) ? calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) : Infinity;
       const distB = (b.lat && b.lng) ? calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng) : Infinity;
       
-      // 兩者都有距離：由近到遠
       if (distA !== Infinity && distB !== Infinity) {
         return distA - distB;
       }
-      
-      // 其中一個有距離：有距離的排前面
       if (distA !== Infinity) return -1;
       if (distB !== Infinity) return 1;
-
-      // 都沒有距離：維持原順序
       return 0;
     });
   }, [activeItems, userLocation]);
@@ -91,7 +81,6 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
     let lat = form.lat;
     let lng = form.lng;
     
-    // 1. Try URL parse
     if (form.mapsUrl) {
         const coords = parseCoordinatesFromUrl(form.mapsUrl);
         if (coords) {
@@ -100,7 +89,6 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
         }
     }
 
-    // 2. Fallback: Search by name
     if ((!lat || !lng) && form.name) {
          console.log("Searching coordinates by name:", form.name);
          const searchResult = await searchLocationByName(form.name);
@@ -114,28 +102,29 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
 
     try {
         if (editingId) {
-            // Strip undefined with sanitizeData
             const cleanData = sanitizeData(finalData);
             await db.collection('sightseeing').doc(editingId).update(cleanData);
+            showToast("景點更新成功", "success");
         } else {
             const newId = Date.now().toString();
             const item = {
                 id: newId,
                 name: form.name,
                 description: form.description || '',
-                imageUrl: form.imageUrl || '', // No auto image
+                imageUrl: form.imageUrl || '', 
                 mapsUrl: form.mapsUrl || '',
                 lat,
                 lng,
                 deleted: false
             };
-            // Strip undefined with sanitizeData
             const cleanItem = sanitizeData(item);
             await db.collection('sightseeing').doc(newId).set(cleanItem);
+            showToast("景點新增成功", "success");
         }
         setIsAdding(false);
     } catch (err) {
         console.error("Error saving spot:", err);
+        showToast("儲存失敗", "error");
     } finally {
         setIsSubmitting(false);
     }
@@ -144,18 +133,20 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await db.collection('sightseeing').doc(id).update({ deleted: true });
+    showToast("已移至回收桶", "info");
   };
 
   const handleRestore = async (id: string) => {
     await db.collection('sightseeing').doc(id).update({ deleted: false });
+    showToast("景點已復原", "success");
   };
 
   const handlePermanentDelete = async (id: string) => {
     await db.collection('sightseeing').doc(id).delete();
+    showToast("景點永久刪除", "success");
   };
 
   return (
-    // Update padding to pb-28
     <div className="pb-28 px-5">
       <div className="mb-8 border-b border-wafu-indigo/20 pb-4 mx-1">
         <h2 className="text-3xl font-black font-serif text-wafu-indigo tracking-wide">景點清單</h2>
@@ -259,7 +250,6 @@ export const SightseeingList: React.FC<Props> = ({ items, userLocation, onFocus 
                 )}
                 <input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, (base64) => setForm({...form, imageUrl: base64}))} accept="image/*,image/heic,image/heif" hidden />
             </div>
-             {/* 手機版貼上按鈕 */}
             <button
                 type="button"
                 onClick={(e) => {
