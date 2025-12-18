@@ -1,12 +1,12 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <!-- 
       Viewport 設定：
       maximum-scale=1.0, user-scalable=no: 禁止使用者縮放，創造像原生 App 的體驗
-      viewport-fit=cover: 確保內容延伸到 iPhone 的劉海區域 (Notch)
+      viewport-fit=cover: 確保內容延伸到 iPhone 的劉海區域 (Notch) 與底部安全區域
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
@@ -40,9 +40,10 @@
       body {
         -webkit-tap-highlight-color: transparent; /* 移除點擊時的灰色高亮 */
         -webkit-touch-callout: none; /* 禁止長按跳出選單 */
-        /* 修正：移除 position: fixed，避免影響底部安全區域的計算 */
-        min-height: 100vh;
-        min-height: 100dvh;
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
       }
 
       /* --- 捲動條隱藏 (美觀考量) --- */
@@ -55,7 +56,6 @@
       }
       
       /* --- 直書模式 (Vertical Writing) --- */
-      /* 用於日式傳統排版，例如日期顯示 */
       .writing-vertical {
         writing-mode: vertical-rl;
         text-orientation: upright;
@@ -63,54 +63,44 @@
       }
 
       /* --- 全域質感紋理 (Noise Texture) --- */
-      /* 覆蓋在整個網頁上的顆粒感，營造高級紙張質感 */
       .texture-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        pointer-events: none; /* 確保點擊能穿透 */
+        pointer-events: none;
         z-index: 9999;
-        /* 使用 SVG 濾鏡產生噪點 */
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
         opacity: 0.7;
         mix-blend-mode: overlay;
       }
 
       /* --- 和紙紋理 (Washi Paper) --- */
-      /* 應用程式的主背景色與紋理 */
       .bg-wafu-paper {
-        background-color: #FDFBF7; /* 米白色底 */
-        /* 微弱的纖維紋路 */
+        background-color: #FDFBF7;
         background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       }
 
-      /* --- 金箔文字效果 (Gold Leaf) --- */
-      /* 霧面金色漸層，用於強調文字 */
       .text-gold-leaf {
         background: linear-gradient(to bottom right, #C5A059, #E6C585);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
       
-      /* 金箔背景 */
       .bg-gold-leaf {
         background: linear-gradient(to bottom right, #C5A059, #E6C585);
       }
       
-      /* 金色光暈 (不刺眼的柔和光) */
       .gold-glow {
         box-shadow: 0 4px 12px rgba(191, 164, 111, 0.4);
       }
 
-      /* --- 互動動畫：點擊回饋 (Bounce) --- */
       .active-bounce:active {
         transform: scale(0.96);
         transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
-      /* --- 動畫：跳躍旋轉 (Logo用) --- */
       @keyframes jump-spin {
         0% { transform: translateY(0) rotate(0deg) scale(1); }
         30% { transform: translateY(-15px) rotate(10deg) scale(1.05); } 
@@ -120,12 +110,10 @@
         animation: jump-spin 2.5s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      /* --- 動畫：擬真櫻花飄落 (Sakura Fall) --- */
-      /* 包含旋轉 (rotate3d) 與左右搖擺 (sway) 的複合動畫 */
       @keyframes sakura-fall-realistic {
         0% {
           opacity: 0;
-          top: -10vh; /* 從螢幕上方開始 */
+          top: -10vh;
           transform: translateX(0) rotate3d(1, 1, 1, 0deg);
         }
         10% { opacity: 0.9; }
@@ -134,7 +122,7 @@
         75% { transform: translateX(var(--sway-x)) rotate3d(0, 1, 0.5, 135deg); }
         100% {
           opacity: 0;
-          top: 110vh; /* 落下至螢幕下方 */
+          top: 110vh;
           transform: translateX(0) rotate3d(1, 1, 1, 180deg);
         }
       }
@@ -144,13 +132,11 @@
         animation-name: sakura-fall-realistic;
         animation-timing-function: linear;
         animation-fill-mode: forwards;
-        will-change: transform, top, opacity; /* 效能優化 */
+        will-change: transform, top, opacity;
         z-index: 9999;
         pointer-events: none;
       }
 
-      /* --- 自訂 Range Slider (滑桿) 樣式 --- */
-      /* 用於評分輸入 */
       .range-slider {
         -webkit-appearance: none;
         width: 100%;
@@ -160,7 +146,6 @@
         touch-action: none;
       }
       .range-slider:focus { outline: none; }
-      /* 滑軌樣式 */
       .range-slider::-webkit-slider-runnable-track {
         width: 100%;
         height: 4px; 
@@ -169,12 +154,11 @@
         border-radius: 999px;
         transition: background 0.2s;
       }
-      /* 滑塊 (Thumb) 樣式 */
       .range-slider::-webkit-slider-thumb {
         height: 20px;
         width: 20px;
         border-radius: 50%;
-        background: #183654; /* 靛藍色 */
+        background: #183654;
         cursor: pointer;
         -webkit-appearance: none;
         margin-top: -8px; 
@@ -185,7 +169,6 @@
         transform: scale(1.3);
       }
 
-      /* --- 動畫：御朱印蓋章效果 (Stamp Drop) --- */
       @keyframes stamp-drop {
         0% { transform: scale(2) rotate(-15deg); opacity: 0; filter: blur(4px); }
         50% { transform: scale(0.9) rotate(-12deg); opacity: 1; filter: blur(0px); }
@@ -196,7 +179,6 @@
         animation: stamp-drop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       }
 
-      /* --- 動畫：按鈕彈出 (Pop) --- */
       @keyframes pop {
         0% { transform: scale(1); }
         40% { transform: scale(1.25); }
@@ -206,7 +188,6 @@
         animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       }
 
-      /* --- 動畫：飛入效果 (Entrance Fly) --- */
       @keyframes fly-enter {
         0% { transform: translateX(-10px) translateY(5px); opacity: 0; }
         20% { opacity: 1; }
@@ -216,8 +197,6 @@
         animation: fly-enter 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
 
-      /* --- 機票卡片相關動畫 --- */
-      /* 卡片彈跳 */
       @keyframes card-bump {
         0% { transform: scale(1); }
         50% { transform: scale(0.98); }
@@ -228,7 +207,6 @@
         animation: card-bump 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       }
 
-      /* 飛機巡航 (緩慢上下浮動) */
       @keyframes plane-cruise {
         0% { transform: rotate(45deg) translateY(0); }
         25% { transform: rotate(42deg) translateY(-3px); } 
@@ -240,7 +218,6 @@
         animation: plane-cruise 4s ease-in-out infinite;
       }
 
-      /* 風速線條 (Wind Stream) */
       @keyframes wind-stream {
         0% { transform: translateX(100%) scaleX(0.5); opacity: 0; }
         30% { opacity: 0.8; }
@@ -250,7 +227,6 @@
         animation: wind-stream 1.0s linear infinite; 
       }
 
-      /* 雲朵飄過 */
       @keyframes cloud-pass {
         0% { transform: translateX(100%); opacity: 0; }
         10% { opacity: 0.6; }
@@ -261,7 +237,6 @@
         animation: cloud-pass linear infinite;
       }
 
-      /* 地面捲動 (Floor Scroll) */
       @keyframes floor-scroll {
         0% { background-position: 0 0; }
         100% { background-position: -40px 0; }
@@ -270,7 +245,6 @@
         animation: floor-scroll 0.3s linear infinite; 
       }
 
-      /* 光澤掃過 (Shine Sweep) */
       @keyframes shine-sweep {
         0% { left: -100%; opacity: 0; }
         20% { opacity: 0.1; }
@@ -289,7 +263,6 @@
         mix-blend-mode: overlay;
       }
 
-      /* 引擎脈衝 */
       @keyframes engine-pulse {
         0% { transform: scale(0.2); opacity: 0.9; }
         100% { transform: scale(0.8); opacity: 0; }
@@ -298,7 +271,6 @@
         animation: engine-pulse 4s ease-out infinite;
       }
 
-      /* 閃爍 (Sparkle) */
       @keyframes sparkle-fade {
         0%, 100% { opacity: 0; transform: scale(0); }
         50% { opacity: 1; transform: scale(1); }
@@ -312,41 +284,35 @@
     <!-- Tailwind CSS 配置腳本 -->
     <script>
       tailwind.config = {
-        darkMode: 'class', // 禁用系統深色模式自動切換，保持應用程式風格一致
+        darkMode: 'class',
         theme: {
           extend: {
-            // 字體設定：對應 Google Fonts
             fontFamily: {
-              serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'], // 標題用
-              sans: ['"Noto Sans JP"', 'sans-serif'], // 內文用
+              serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'],
+              sans: ['"Noto Sans JP"', 'sans-serif'],
             },
-            // 自定義顏色系統 (和風色票)
-            // 若要修改 APP 主色調，請調整這裡
             colors: {
               wafu: {
-                bg: '#FDFBF7',  // 背景米色
-                paper: '#FFFFFF', // 紙張白
-                text: '#1A202C',  // 文字深灰
-                indigo: '#183654', // 褐返色 (Kachiiro) - 主視覺藍色
-                darkIndigo: '#0B1E33', // 深藍
-                gold: '#BFA46F',   // 霧金
-                goldLight: '#E6D5B8', // 淺金
-                border: '#E2E8F0', // 邊框灰
-                iron: '#4A5568',   // 鐵灰
+                bg: '#FDFBF7',
+                paper: '#FFFFFF',
+                text: '#1A202C',
+                indigo: '#183654',
+                darkIndigo: '#0B1E33',
+                gold: '#BFA46F',
+                goldLight: '#E6D5B8',
+                border: '#E2E8F0',
+                iron: '#4A5568',
               }
             },
-            // 自定義背景圖案 (青海波紋)
             backgroundImage: {
               'seigaiha': "url(\"data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 20 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 12c0-5.523 4.477-10 10-10s10 4.477 10 10v-2c0-5.523-4.477-10-10-10S0 4.477 0 10v2z' fill='%23183654' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E\")",
             },
-            // 自定義陰影 (增加層次感)
             boxShadow: {
               'washi': '0 2px 15px -3px rgba(24, 54, 84, 0.06), 0 0 0 1px rgba(24, 54, 84, 0.02)',
               'float': '0 20px 40px -10px rgba(24, 54, 84, 0.1), 0 0 0 1px rgba(255,255,255,0.5)',
               'luxury': '0 15px 35px -5px rgba(191, 164, 111, 0.25), 0 0 0 1px rgba(191, 164, 111, 0.1)',
               'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
             },
-            // 通用過場動畫定義
             animation: {
               'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
               'fade-in-up-gentle': 'fadeInUpGentle 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)',
@@ -354,7 +320,6 @@
               'zoom-in': 'zoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
               'fade-in': 'fadeIn 0.4s ease-out',
             },
-            // 動畫關鍵影格 (Keyframes)
             keyframes: {
               fadeInUp: {
                 '0%': { opacity: 0, transform: 'translateY(10px)' },
@@ -382,7 +347,6 @@
       }
     </script>
     
-    <!-- Import Map: 模組對應表 (無需 Build Step 即可運作) -->
     <script type="importmap">
 {
   "imports": {
@@ -399,13 +363,8 @@
 </script>
 </head>
   <body class="bg-[#F5F2EB] text-wafu-text font-sans antialiased overflow-hidden selection:bg-wafu-indigo selection:text-white">
-    <!-- 全域材質覆蓋層 (SVG Noise) -->
     <div class="texture-overlay"></div>
-    
-    <!-- React 應用程式掛載點 -->
-    <div id="root"></div>
-    
-    <!-- 程式入口腳本 -->
+    <div id="root" class="h-full w-full"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

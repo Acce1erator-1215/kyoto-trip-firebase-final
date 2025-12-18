@@ -82,7 +82,7 @@ function AppContent() {
   };
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
+    <div className="fixed inset-0 bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
       {/* Error Boundary UI */}
       {dbError && (

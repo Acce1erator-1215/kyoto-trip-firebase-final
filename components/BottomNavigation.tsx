@@ -12,11 +12,13 @@ interface BottomNavigationProps {
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, setActiveTab, shoppingCount }) => {
   return (
-    // RWD 優化：
-    // Mobile: fixed bottom-0 w-full (滿版置底)
-    // Tablet/Desktop (md+): 懸浮島樣式 (置中、圓角、陰影、離底邊有距離)
-    <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-40 transition-all duration-300">
-       <div className="bg-wafu-paper/95 backdrop-blur-xl border-t md:border border-wafu-indigo/10 md:rounded-full md:shadow-2xl shadow-[0_-5px_25px_rgba(24,54,84,0.03)] pb-[env(safe-area-inset-bottom)] md:pb-1 md:px-8">
+    /* 
+      RWD 優化與 Safe Area 修正：
+      Mobile: fixed bottom-0 w-full，將背景色與毛玻璃效果應用於此，
+      確保 pb-[env(safe-area-inset-bottom)] 產生的區域也能被背景色填充。
+    */
+    <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-40 transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/10 md:bg-transparent md:backdrop-blur-none md:border-none">
+       <div className="md:bg-wafu-paper/95 md:backdrop-blur-xl md:border md:border-wafu-indigo/10 md:rounded-full md:shadow-2xl shadow-[0_-5px_25px_rgba(24,54,84,0.03)] pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-1 md:pb-1 md:px-8">
           <div className="max-w-lg mx-auto w-full md:w-auto grid grid-cols-6 md:gap-8 px-1 py-1">
             <button onClick={() => setActiveTab('itinerary')} className={`relative z-10 group flex flex-col items-center justify-center gap-0.5 md:gap-1 p-2 transition-all duration-300 active-bounce ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
               <div className={`p-0.5 transition-all duration-500 ease-out ${activeTab === 'itinerary' ? 'transform -translate-y-1 drop-shadow-md' : ''}`}><Icons.Calendar strokeWidth={2.5} /></div>
