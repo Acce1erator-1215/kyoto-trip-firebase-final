@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { BottomNavigation, Tab } from './BottomNavigation';
 import { SakuraOverlay } from './SakuraOverlay';
 import { Header } from './Header';
@@ -41,6 +41,25 @@ function AppContent() {
   const [showMap, setShowMap] = useState<boolean>(true); 
   const [focusedLocation, setFocusedLocation] = useState<{lat: number, lng: number} | null>(null); 
   
+  // --- Scroll Memory Logic ---
+  const tabScrollPositions = useRef<Record<string, number>>({});
+  const mainContentDrag = useDraggableScroll({ direction: 'vertical' });
+
+  const handleTabChange = (newTab: Tab) => {
+    if (activeTab === newTab) return;
+    if (mainContentDrag.ref.current) {
+      tabScrollPositions.current[activeTab] = mainContentDrag.ref.current.scrollTop;
+    }
+    setActiveTab(newTab);
+  };
+
+  useLayoutEffect(() => {
+    if (mainContentDrag.ref.current) {
+      const savedPosition = tabScrollPositions.current[activeTab] || 0;
+      mainContentDrag.ref.current.scrollTop = savedPosition;
+    }
+  }, [activeTab]);
+
   // --- Custom Hooks ---
   const { userLocation, error: geoError } = useGeolocation(); 
   const { currentRate, refresh: refreshRate, isLoading: isRateLoading, lastUpdated: rateLastUpdated } = useExchangeRate(); 
@@ -54,8 +73,6 @@ function AppContent() {
     sightseeingSpots, 
     dbError 
   } = useFirestoreData(); 
-
-  const mainContentDrag = useDraggableScroll({ direction: 'vertical' });
 
   // --- Handlers ---
   const handleFocus = (lat: number, lng: number) => {
@@ -82,9 +99,9 @@ function AppContent() {
   };
 
   return (
+    /* 使用 fixed inset-0 確保主體完全覆蓋螢幕，防止背景色溢出 */
     <div className="fixed inset-0 bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
-      {/* Error Boundary UI */}
       {dbError && (
         <div className="fixed inset-0 z-[20000] bg-black/80 flex flex-col items-center justify-center text-white p-8 text-center backdrop-blur-md">
             <div className="text-4xl mb-4">⚠️</div>
@@ -93,17 +110,15 @@ function AppContent() {
         </div>
       )}
 
-      {/* Visual Effects */}
       <SakuraOverlay petals={sakuraPetals} />
 
-      {/* Navigation */}
       <Header triggerSakura={triggerSakura} isSpinning={isSpinning} />
 
-      {/* Main Content Area */}
+      {/* Main Content Area - pb-20 預留給導航列 */}
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 
-        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain ${mainContentDrag.className.replace('select-none', '')}`}
+        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-20 ${mainContentDrag.className.replace('select-none', '')}`}
       >
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
           
@@ -170,10 +185,9 @@ function AppContent() {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
       <BottomNavigation 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         shoppingCount={shoppingItems.filter(i => !i.bought && !i.deleted).length} 
       />
     </div>

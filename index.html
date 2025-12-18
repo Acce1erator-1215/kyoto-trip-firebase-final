@@ -3,365 +3,130 @@
 <html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
-    <!-- 
-      Viewport 設定：
-      maximum-scale=1.0, user-scalable=no: 禁止使用者縮放，創造像原生 App 的體驗
-      viewport-fit=cover: 確保內容延伸到 iPhone 的劉海區域 (Notch) 與底部安全區域
-    -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    
-    <!-- iOS PWA 設定：讓網頁加入主畫面後看起來像 App -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    
     <title>Kyoto Journey 2026</title>
-    
-    <!-- Tailwind CSS (樣式庫) - 透過 CDN 載入 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Leaflet 地圖套件 CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    
-    <!-- Firebase Compat Scripts (UMD) - Required for v8 syntax support in this environment -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    
-    <!-- 
-      Google Fonts 字體設定：
-      - Noto Sans JP: 無襯線體 (內文用，易讀性高)
-      - Noto Serif JP: 襯線體 (標題用，具備傳統感)
-      - Shippori Mincho: 明朝體 (強調書法美感，用於大標題)
-    -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <style>
-      /* --- iOS 優化設定 --- */
       body {
-        -webkit-tap-highlight-color: transparent; /* 移除點擊時的灰色高亮 */
-        -webkit-touch-callout: none; /* 禁止長按跳出選單 */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
         height: 100%;
         width: 100%;
         margin: 0;
         padding: 0;
       }
-
-      /* --- 捲動條隱藏 (美觀考量) --- */
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-      
-      /* --- 直書模式 (Vertical Writing) --- */
-      .writing-vertical {
-        writing-mode: vertical-rl;
-        text-orientation: upright;
-        letter-spacing: 0.1em;
-      }
-
-      /* --- 全域質感紋理 (Noise Texture) --- */
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      .writing-vertical { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 0.1em; }
       .texture-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 9999;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-        opacity: 0.7;
-        mix-blend-mode: overlay;
+        opacity: 0.7; mix-blend-mode: overlay;
       }
-
-      /* --- 和紙紋理 (Washi Paper) --- */
       .bg-wafu-paper {
         background-color: #FDFBF7;
         background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       }
-
-      .text-gold-leaf {
-        background: linear-gradient(to bottom right, #C5A059, #E6C585);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
+      .text-gold-leaf { background: linear-gradient(to bottom right, #A68B5B, #D4B982); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      .bg-gold-leaf { background: linear-gradient(to bottom right, #A68B5B, #D4B982, #BFA46F); }
       
-      .bg-gold-leaf {
-        background: linear-gradient(to bottom right, #C5A059, #E6C585);
+      @keyframes gold-shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
       }
-      
-      .gold-glow {
-        box-shadow: 0 4px 12px rgba(191, 164, 111, 0.4);
+      .animate-gold-shimmer {
+        background: linear-gradient(
+          90deg, 
+          #A68B5B 0%, 
+          #BFA46F 35%, 
+          #D4B982 50%, 
+          #BFA46F 65%, 
+          #A68B5B 100%
+        );
+        background-size: 200% 100%;
+        animation: gold-shimmer 12s infinite linear;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
       }
 
-      .active-bounce:active {
-        transform: scale(0.96);
-        transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+      /* 自定義旋轉動畫：帶有輕微的縮放感 */
+      @keyframes spin-gentle {
+        from { transform: rotate(0deg) scale(1); }
+        50% { transform: rotate(180deg) scale(1.1); }
+        to { transform: rotate(360deg) scale(1); }
+      }
+      .animate-spin-gentle {
+        animation: spin-gentle 0.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
       }
 
+      .gold-glow { shadow: 0 4px 12px rgba(166, 139, 91, 0.2); }
+      .active-bounce:active { transform: scale(0.96); transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
       @keyframes jump-spin {
         0% { transform: translateY(0) rotate(0deg) scale(1); }
         30% { transform: translateY(-15px) rotate(10deg) scale(1.05); } 
         100% { transform: translateY(0) rotate(360deg) scale(1); } 
       }
-      .animate-jump-spin {
-        animation: jump-spin 2.5s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-
+      .animate-jump-spin { animation: jump-spin 2.5s cubic-bezier(0.4, 0, 0.2, 1); }
       @keyframes sakura-fall-realistic {
-        0% {
-          opacity: 0;
-          top: -10vh;
-          transform: translateX(0) rotate3d(1, 1, 1, 0deg);
-        }
+        0% { opacity: 0; top: -10vh; transform: translateX(0) rotate3d(1, 1, 1, 0deg); }
         10% { opacity: 0.9; }
         25% { transform: translateX(var(--sway-x)) rotate3d(1, 0.5, 0, 45deg); }
         50% { transform: translateX(calc(var(--sway-x) * -1)) rotate3d(0.5, 1, 0, 90deg); }
         75% { transform: translateX(var(--sway-x)) rotate3d(0, 1, 0.5, 135deg); }
-        100% {
-          opacity: 0;
-          top: 110vh;
-          transform: translateX(0) rotate3d(1, 1, 1, 180deg);
-        }
+        100% { opacity: 0; top: 110vh; transform: translateX(0) rotate3d(1, 1, 1, 180deg); }
       }
-
-      .animate-sakura-fall {
-        position: fixed;
-        animation-name: sakura-fall-realistic;
-        animation-timing-function: linear;
-        animation-fill-mode: forwards;
-        will-change: transform, top, opacity;
-        z-index: 9999;
-        pointer-events: none;
-      }
-
-      .range-slider {
-        -webkit-appearance: none;
-        width: 100%;
-        background: transparent;
-        cursor: pointer;
-        height: 24px;
-        touch-action: none;
-      }
+      .animate-sakura-fall { position: fixed; animation-name: sakura-fall-realistic; animation-timing-function: linear; animation-fill-mode: forwards; will-change: transform, top, opacity; z-index: 9999; pointer-events: none; }
+      .range-slider { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; height: 24px; touch-action: none; }
       .range-slider:focus { outline: none; }
-      .range-slider::-webkit-slider-runnable-track {
-        width: 100%;
-        height: 4px; 
-        cursor: pointer;
-        background: #E2E8F0;
-        border-radius: 999px;
-        transition: background 0.2s;
-      }
-      .range-slider::-webkit-slider-thumb {
-        height: 20px;
-        width: 20px;
-        border-radius: 50%;
-        background: #183654;
-        cursor: pointer;
-        -webkit-appearance: none;
-        margin-top: -8px; 
-        box-shadow: 0 0 0 2px #fff, 0 4px 10px rgba(24, 54, 84, 0.3);
-        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      }
-      .range-slider:active::-webkit-slider-thumb {
-        transform: scale(1.3);
-      }
-
-      @keyframes stamp-drop {
-        0% { transform: scale(2) rotate(-15deg); opacity: 0; filter: blur(4px); }
-        50% { transform: scale(0.9) rotate(-12deg); opacity: 1; filter: blur(0px); }
-        70% { transform: scale(1.05) rotate(-12deg); }
-        100% { transform: scale(1) rotate(-12deg); }
-      }
-      .animate-stamp-drop {
-        animation: stamp-drop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-      }
-
-      @keyframes pop {
-        0% { transform: scale(1); }
-        40% { transform: scale(1.25); }
-        100% { transform: scale(1); }
-      }
-      .animate-pop {
-        animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      }
-
-      @keyframes fly-enter {
-        0% { transform: translateX(-10px) translateY(5px); opacity: 0; }
-        20% { opacity: 1; }
-        100% { transform: translateX(0) translateY(0); opacity: 1; }
-      }
-      .animate-fly {
-        animation: fly-enter 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      }
-
-      @keyframes card-bump {
-        0% { transform: scale(1); }
-        50% { transform: scale(0.98); }
-        75% { transform: scale(1.01); }
-        100% { transform: scale(1); }
-      }
-      .animate-card-bump {
-        animation: card-bump 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      }
-
-      @keyframes plane-cruise {
-        0% { transform: rotate(45deg) translateY(0); }
-        25% { transform: rotate(42deg) translateY(-3px); } 
-        50% { transform: rotate(45deg) translateY(0); }
-        75% { transform: rotate(48deg) translateY(2px); } 
-        100% { transform: rotate(45deg) translateY(0); }
-      }
-      .animate-plane-cruise {
-        animation: plane-cruise 4s ease-in-out infinite;
-      }
-
-      @keyframes wind-stream {
-        0% { transform: translateX(100%) scaleX(0.5); opacity: 0; }
-        30% { opacity: 0.8; }
-        100% { transform: translateX(-150%) scaleX(1.5); opacity: 0; }
-      }
-      .animate-wind-stream {
-        animation: wind-stream 1.0s linear infinite; 
-      }
-
-      @keyframes cloud-pass {
-        0% { transform: translateX(100%); opacity: 0; }
-        10% { opacity: 0.6; }
-        90% { opacity: 0.6; }
-        100% { transform: translateX(-150%); opacity: 0; }
-      }
-      .animate-cloud-pass {
-        animation: cloud-pass linear infinite;
-      }
-
-      @keyframes floor-scroll {
-        0% { background-position: 0 0; }
-        100% { background-position: -40px 0; }
-      }
-      .animate-floor-scroll {
-        animation: floor-scroll 0.3s linear infinite; 
-      }
-
-      @keyframes shine-sweep {
-        0% { left: -100%; opacity: 0; }
-        20% { opacity: 0.1; }
-        100% { left: 200%; opacity: 0; }
-      }
-      .animate-shine-sweep {
-        position: absolute;
-        top: 0;
-        width: 40%;
-        height: 100%;
-        background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent);
-        transform: skewX(-20deg);
-        animation: shine-sweep 0.4s ease-out forwards;
-        pointer-events: none;
-        z-index: 50;
-        mix-blend-mode: overlay;
-      }
-
-      @keyframes engine-pulse {
-        0% { transform: scale(0.2); opacity: 0.9; }
-        100% { transform: scale(0.8); opacity: 0; }
-      }
-      .animate-engine-pulse {
-        animation: engine-pulse 4s ease-out infinite;
-      }
-
-      @keyframes sparkle-fade {
-        0%, 100% { opacity: 0; transform: scale(0); }
-        50% { opacity: 1; transform: scale(1); }
-      }
-      .animate-sparkle-fade {
-        animation: sparkle-fade 1.1s ease-in-out infinite;
-      }
-
+      .range-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #E2E8F0; border-radius: 999px; transition: background 0.2s; }
+      .range-slider::-webkit-slider-thumb { height: 20px; width: 20px; border-radius: 50%; background: #183654; cursor: pointer; -webkit-appearance: none; margin-top: -8px; box-shadow: 0 0 0 2px #fff, 0 4px 10px rgba(24, 54, 84, 0.3); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+      .range-slider:active::-webkit-slider-thumb { transform: scale(1.3); }
+      @keyframes stamp-drop { 0% { transform: scale(2) rotate(-15deg); opacity: 0; filter: blur(4px); } 50% { transform: scale(0.9) rotate(-12deg); opacity: 1; filter: blur(0px); } 70% { transform: scale(1.05) rotate(-12deg); } 100% { transform: scale(1) rotate(-12deg); } }
+      .animate-stamp-drop { animation: stamp-drop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+      .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+      @keyframes fly-enter { 0% { transform: translateX(-10px) translateY(5px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateX(0) translateY(0); opacity: 1; } }
+      .animate-fly { animation: fly-enter 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+      @keyframes card-bump { 0% { transform: scale(1); } 50% { transform: scale(0.98); } 75% { transform: scale(1.01); } 100% { transform: scale(1); } }
+      .animate-card-bump { animation: card-bump 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+      @keyframes plane-cruise { 0% { transform: rotate(45deg) translateY(0); } 25% { transform: rotate(42deg) translateY(-3px); } 50% { transform: rotate(45deg) translateY(0); } 75% { transform: rotate(48deg) translateY(2px); } 100% { transform: rotate(45deg) translateY(0); } }
+      .animate-plane-cruise { animation: plane-cruise 4s ease-in-out infinite; }
+      @keyframes wind-stream { 0% { transform: translateX(100%) scaleX(0.5); opacity: 0; } 30% { opacity: 0.8; } 100% { transform: translateX(-150%) scaleX(1.5); opacity: 0; } }
+      .animate-wind-stream { animation: wind-stream 1.0s linear infinite; }
+      @keyframes cloud-pass { 0% { transform: translateX(100%); opacity: 0; } 10% { opacity: 0.6; } 90% { opacity: 0.6; } 100% { transform: translateX(-150%); opacity: 0; } }
+      .animate-cloud-pass { animation: cloud-pass linear infinite; }
+      @keyframes floor-scroll { 0% { background-position: 0 0; } 100% { background-position: -40px 0; } }
+      .animate-floor-scroll { animation: floor-scroll 0.3s linear infinite; }
+      @keyframes shine-sweep { 0% { left: -100%; opacity: 0; } 20% { opacity: 0.1; } 100% { left: 200%; opacity: 0; } }
+      .animate-shine-sweep { position: absolute; top: 0; width: 40%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent); transform: skewX(-20deg); animation: shine-sweep 0.4s ease-out forwards; pointer-events: none; z-index: 50; mix-blend-mode: overlay; }
+      @keyframes engine-pulse { 0% { transform: scale(0.2); opacity: 0.9; } 100% { transform: scale(0.8); opacity: 0; } }
+      .animate-engine-pulse { animation: engine-pulse 4s ease-out infinite; }
+      @keyframes sparkle-fade { 0%, 100% { opacity: 0; transform: scale(0); } 50% { opacity: 1; transform: scale(1); } }
+      .animate-sparkle-fade { animation: sparkle-fade 1.1s ease-in-out infinite; }
     </style>
-    
-    <!-- Tailwind CSS 配置腳本 -->
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
-            fontFamily: {
-              serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'],
-              sans: ['"Noto Sans JP"', 'sans-serif'],
-            },
-            colors: {
-              wafu: {
-                bg: '#FDFBF7',
-                paper: '#FFFFFF',
-                text: '#1A202C',
-                indigo: '#183654',
-                darkIndigo: '#0B1E33',
-                gold: '#BFA46F',
-                goldLight: '#E6D5B8',
-                border: '#E2E8F0',
-                iron: '#4A5568',
-              }
-            },
-            backgroundImage: {
-              'seigaiha': "url(\"data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 20 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 12c0-5.523 4.477-10 10-10s10 4.477 10 10v-2c0-5.523-4.477-10-10-10S0 4.477 0 10v2z' fill='%23183654' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E\")",
-            },
-            boxShadow: {
-              'washi': '0 2px 15px -3px rgba(24, 54, 84, 0.06), 0 0 0 1px rgba(24, 54, 84, 0.02)',
-              'float': '0 20px 40px -10px rgba(24, 54, 84, 0.1), 0 0 0 1px rgba(255,255,255,0.5)',
-              'luxury': '0 15px 35px -5px rgba(191, 164, 111, 0.25), 0 0 0 1px rgba(191, 164, 111, 0.1)',
-              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
-            },
-            animation: {
-              'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-              'fade-in-up-gentle': 'fadeInUpGentle 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)',
-              'modal-slide-up': 'modalSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
-              'zoom-in': 'zoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-              'fade-in': 'fadeIn 0.4s ease-out',
-            },
-            keyframes: {
-              fadeInUp: {
-                '0%': { opacity: 0, transform: 'translateY(10px)' },
-                '100%': { opacity: 1, transform: 'translateY(0)' },
-              },
-              fadeInUpGentle: {
-                '0%': { opacity: 0, transform: 'translateY(20px) scale(0.99)', filter: 'blur(4px)' },
-                '100%': { opacity: 1, transform: 'translateY(0) scale(1)', filter: 'blur(0)' },
-              },
-              modalSlideUp: {
-                '0%': { opacity: 0, transform: 'translateY(40px) scale(0.96)' },
-                '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
-              },
-              zoomIn: {
-                '0%': { opacity: 0, transform: 'scale(0.95)', filter: 'blur(2px)' },
-                '100%': { opacity: 1, transform: 'scale(1)', filter: 'blur(0)' },
-              },
-              fadeIn: {
-                '0%': { opacity: 0 },
-                '100%': { opacity: 1 },
-              }
-            }
+            fontFamily: { serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'], sans: ['"Noto Sans JP"', 'sans-serif'] },
+            colors: { wafu: { bg: '#FDFBF7', paper: '#FFFFFF', text: '#1A202C', indigo: '#183654', darkIndigo: '#0B1E33', gold: '#BFA46F', goldLight: '#E6D5B8', border: '#E2E8F0', iron: '#4A5568' } },
+            backgroundImage: { 'seigaiha': "url(\"data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 20 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 12c0-5.523 4.477-10 10-10s10 4.477 10 10v-2c0-5.523-4.477-10-10-10S0 4.477 0 10v2z' fill='%23183654' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E\")" },
+            boxShadow: { 'washi': '0 2px 15px -3px rgba(24, 54, 84, 0.06), 0 0 0 1px rgba(24, 54, 84, 0.02)', 'float': '0 20px 40px -10px rgba(24, 54, 84, 0.1), 0 0 0 1px rgba(255,255,255,0.5)', 'luxury': '0 15px 35px -5px rgba(166, 139, 91, 0.25), 0 0 0 1px rgba(166, 139, 91, 0.1)', 'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)' },
+            animation: { 'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)', 'fade-in-up-gentle': 'fadeInUpGentle 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)', 'modal-slide-up': 'modalSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1)', 'zoom-in': 'zoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)', 'fade-in': 'fadeIn 0.4s ease-out' },
+            keyframes: { fadeInUp: { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } }, fadeInUpGentle: { '0%': { opacity: 0, transform: 'translateY(20px) scale(0.99)', filter: 'blur(4px)' }, '100%': { opacity: 1, transform: 'translateY(0) scale(1)', filter: 'blur(0)' } }, modalSlideUp: { '0%': { opacity: 0, transform: 'translateY(40px) scale(0.96)' }, '100%': { opacity: 1, transform: 'translateY(0) scale(1)' } }, zoomIn: { '0%': { opacity: 0, transform: 'scale(0.95)', filter: 'blur(2px)' }, '100%': { opacity: 1, transform: 'scale(1)', filter: 'blur(0)' } }, fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } } }
           }
         }
       }
     </script>
-    
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react/": "https://esm.sh/react@18.2.0/",
-    "react-dom": "https://esm.sh/react-dom@18.2.0?external=react",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?external=react",
-    "vite": "https://aistudiocdn.com/vite@^7.2.6",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "@vercel/speed-insights/": "https://aistudiocdn.com/@vercel/speed-insights@^1.3.1/"
-  }
-}
-</script>
-</head>
+    <script type="importmap"> { "imports": { "react": "https://esm.sh/react@18.2.0", "react/": "https://esm.sh/react@18.2.0/", "react-dom": "https://esm.sh/react-dom@18.2.0?external=react", "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?external=react", "vite": "https://aistudiocdn.com/vite@^7.2.6", "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1", "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/", "@vercel/speed-insights/": "https://aistudiocdn.com/@vercel/speed-insights@^1.3.1/" } } </script>
+  </head>
   <body class="bg-[#F5F2EB] text-wafu-text font-sans antialiased overflow-hidden selection:bg-wafu-indigo selection:text-white">
     <div class="texture-overlay"></div>
     <div id="root" class="h-full w-full"></div>
