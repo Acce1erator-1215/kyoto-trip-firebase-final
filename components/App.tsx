@@ -75,7 +75,7 @@ function AppContent() {
 
 
   return (
-    // Change: Use h-[100dvh] instead of fixed inset-0 to fix mobile browser address bar issues
+    // Update: 使用 h-[100dvh] 取代 fixed inset-0，這能更穩定地處理移動端瀏覽器網址列伸縮的問題
     <div className="h-[100dvh] w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base relative">
       
       {/* Critical DB Error Overlay */}
@@ -95,7 +95,8 @@ function AppContent() {
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 
-        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-24 ${mainContentDrag.className.replace('select-none', '')}`}
+        // Update: 增加 pb-28 (112px) 確保底部內容不被導航列遮擋
+        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-28 ${mainContentDrag.className.replace('select-none', '')}`}
       >
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
           {activeTab === 'itinerary' && <ItineraryTab />}
