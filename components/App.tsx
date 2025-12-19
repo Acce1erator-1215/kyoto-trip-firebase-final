@@ -73,32 +73,45 @@ function AppContent() {
     }
   }, [focusedLocation]);
   
-  // --- Mobile Height Fix (JS Force Calc) ---
+  // --- Mobile Height Fix (Enhanced Polling) ---
   useEffect(() => {
     const setAppHeight = () => {
-      // 獲取視窗的內部高度 (這會正確排除網址列等瀏覽器 UI)
       const doc = document.documentElement;
-      doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+      // 使用 window.innerHeight 確保包含 iOS Safari 的動態網址列變化
+      const height = window.innerHeight;
+      if (height > 0) {
+        doc.style.setProperty('--app-height', `${height}px`);
+      }
     };
 
-    // 初始化與監聽 resize / orientationchange
+    // 1. 初始化執行
     setAppHeight();
+
+    // 2. 監聽 resize / orientationchange
     window.addEventListener('resize', setAppHeight);
     window.addEventListener('orientationchange', setAppHeight);
+
+    // 3. [關鍵修正] 輪詢機制 (Polling)
+    // 瀏覽器 UI 在載入初期會動態伸縮，導致前幾毫秒的高度是錯的。
+    // 我們在 100ms, 300ms, 500ms, 1000ms 各校正一次，確保抓到穩定後的數值。
+    const timers = [100, 300, 500, 1000, 1500].map(delay => 
+      setTimeout(setAppHeight, delay)
+    );
 
     return () => {
       window.removeEventListener('resize', setAppHeight);
       window.removeEventListener('orientationchange', setAppHeight);
+      timers.forEach(t => clearTimeout(t));
     };
   }, []);
 
 
   return (
-    // Update: 使用 JS 計算的 --app-height 變數，強制 App 容器等於當前可見區域
-    // 這解決了 100vh 在移動端網址列伸縮時導致的高度跳動或遮擋問題
+    // Update: style 使用 var(--app-height) 配合 fallback 100%
+    // 這裡改回 fixed inset-0 搭配 JS 高度，這是 PWA 類應用最穩定的容器設法
     <div 
-      className="relative w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base"
-      style={{ height: 'var(--app-height, 100vh)' }}
+      className="fixed inset-0 w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base"
+      style={{ height: 'var(--app-height, 100%)' }}
     >
       
       {/* Critical DB Error Overlay */}
