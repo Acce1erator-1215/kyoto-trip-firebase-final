@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useEffect, useState } from 'react';
+import React, { useRef, useLayoutEffect, useEffect } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { SakuraOverlay } from './SakuraOverlay';
 import { Header } from './Header';
@@ -43,24 +43,6 @@ function AppContent() {
   const { dbError } = useData();
   const { activeTab, focusedLocation } = useUI();
   const { isSpinning, sakuraPetals, triggerSakura } = useSakuraAnimation();
-  
-  // --- Fix: JS Viewport Height ---
-  // 使用 JS 強制計算視窗高度，解決 CSS 100dvh 在部分瀏覽器初始化時不穩定的問題
-  const [appHeight, setAppHeight] = useState('100dvh'); 
-  
-  useEffect(() => {
-    const updateHeight = () => {
-      // 獲取確切的像素高度，這是最穩定的解法
-      setAppHeight(`${window.innerHeight}px`);
-    };
-    
-    // 初始化執行
-    updateHeight();
-    
-    // 監聽 Resize 事件 (旋轉螢幕或網址列伸縮)
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
 
   // --- Scroll Logic ---
   const tabScrollPositions = useRef<Record<string, number>>({});
@@ -93,11 +75,9 @@ function AppContent() {
 
 
   return (
-    // Update: 使用 inline style 強制設定高度，繞過 CSS 載入延遲
-    <div 
-      className="w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base relative"
-      style={{ height: appHeight }}
-    >
+    // Update: 改用 h-[100svh]。svh 代表 Small Viewport Height，即使網址列展開，內容也能完整顯示不被遮擋。
+    // 這比 JS 計算更穩定，沒有 Race Condition。
+    <div className="h-[100svh] w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base relative">
       
       {/* Critical DB Error Overlay */}
       {dbError && (

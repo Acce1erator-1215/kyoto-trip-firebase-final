@@ -14,16 +14,15 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      /* Update: 強制鎖定 Body，解決 iOS 回彈與高度不穩問題 */
+      /* Update: 移除 position: fixed，改用 height: 100% + overflow: hidden */
+      /* 這能讓內部的 svh 單位正確運作，同時防止 iOS 回彈 */
       html, body {
         height: 100%;
         width: 100%;
         margin: 0;
         padding: 0;
-        overflow: hidden; /* 禁止外層滾動 */
-        position: fixed;  /* 鎖定視窗 */
-        inset: 0;
-        overscroll-behavior: none; /* 禁止橡皮筋效果 */
+        overflow: hidden; 
+        overscroll-behavior: none;
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
       }
