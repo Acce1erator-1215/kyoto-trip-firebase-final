@@ -75,7 +75,8 @@ function AppContent() {
 
 
   return (
-    <div className="fixed inset-0 bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
+    // Change: Use h-[100dvh] instead of fixed inset-0 to fix mobile browser address bar issues
+    <div className="h-[100dvh] w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base relative">
       
       {/* Critical DB Error Overlay */}
       {dbError && (
@@ -94,7 +95,7 @@ function AppContent() {
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 
-        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-20 ${mainContentDrag.className.replace('select-none', '')}`}
+        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-24 ${mainContentDrag.className.replace('select-none', '')}`}
       >
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
           {activeTab === 'itinerary' && <ItineraryTab />}

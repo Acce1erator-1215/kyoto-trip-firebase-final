@@ -145,7 +145,7 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
         });
 
         await batch.commit();
-        if(newBoughtState) showToast("已購入！記帳成功", "success");
+        if(newBoughtState) showToast("已購入 記帳成功", "success");
 
     } catch (err) {
         console.error("Error toggling bought state with batch:", err);
