@@ -12,13 +12,13 @@ export const BottomNavigation: React.FC = () => {
   const shoppingCount = shoppingItems.filter(i => !i.bought && !i.deleted).length;
 
   return (
-    // Update: 改用 absolute bottom-0
-    // 在 body 為 fixed inset-0 的架構下，App 容器是 relative 且充滿螢幕的。
-    // 因此 absolute bottom-0 會將導航列精確釘在 App 容器的最底端 (即螢幕底端)，
-    // 且比 fixed 更能避免鍵盤彈出時的佈局錯亂。
+    // Update: 使用 absolute bottom-0 
+    // 因為 App 容器已經使用了 h-[100dvh]，它代表了實際可見的 Viewport 高度。
+    // 使用 absolute 定位於 App 容器底部，比 fixed 更能避免 iOS 鍵盤彈出時的佈局錯亂問題。
     <div className="absolute bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-[9999] transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
        {/* 
-          保留 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] 確保不被 Home Indicator 遮擋
+          pb-[calc(env(safe-area-inset-bottom)+0.75rem)] 
+          適配 iPhone X+ 的底部橫條 (Home Indicator) 區域
        */}
        <div className="md:bg-wafu-paper/95 md:backdrop-blur-xl md:border md:border-wafu-indigo/10 md:rounded-full md:shadow-2xl shadow-[0_-5px_20px_rgba(24,54,84,0.02)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 md:pb-1 md:px-8">
           <div className="max-w-lg mx-auto w-full md:w-auto grid grid-cols-6 md:gap-8 px-1">

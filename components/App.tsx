@@ -75,9 +75,11 @@ function AppContent() {
 
 
   return (
-    // Update: 簡化為 relative h-full w-full。
-    // 因為 index.html 中的 body 已經設為 fixed inset-0，這裡不需要再做任何高度黑魔法。
-    <div className="relative h-full w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
+    // Update: 使用 h-[100dvh] (dynamic viewport height)。
+    // 這是現代瀏覽器解決 Mobile Safari 網址列伸縮最完美的方案。
+    // 它會動態調整高度，確保容器永遠剛好填滿「可見」區域，底部導航列不會被遮擋。
+    // Fallback: 支援不支援 dvh 的舊瀏覽器使用 100vh
+    <div className="relative h-screen supports-[height:100dvh]:h-[100dvh] w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
       {/* Critical DB Error Overlay */}
       {dbError && (
@@ -93,7 +95,7 @@ function AppContent() {
       <Header triggerSakura={triggerSakura} isSpinning={isSpinning} />
 
       {/* Main Content Area */}
-      {/* pb-28 預留底部導航空間 */}
+      {/* pb-28 確保內容不會被底部導航遮擋 */}
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 

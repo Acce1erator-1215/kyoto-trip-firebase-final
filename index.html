@@ -8,37 +8,40 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Kyoto Journey 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <!-- 移除 integrity 屬性，避免因 CDN 版本微調導致雜湊驗證失敗而封鎖腳本 -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      /* Update: App Shell 鎖定策略 (The Holy Grail Layout for iOS PWA) */
-      /* 強制將 body 釘死在螢幕四個角落，使其行為像 Native App */
-      html, body {
-        position: fixed;
-        inset: 0;
-        width: 100%;
+      /* Reset & Base Styles */
+      html {
         height: 100%;
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
         margin: 0;
         padding: 0;
-        overflow: hidden; /* 禁止瀏覽器層級滾動 */
+        width: 100%;
+        height: 100%;
+        /* 使用 fixed 可能導致部分 iOS 版本滾動卡住，改回 overflow-hidden 交由 React 容器控制 */
+        overflow: hidden; 
         overscroll-behavior: none;
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
-        z-index: 0;
         background-color: #FDFBF7;
       }
       #root {
         height: 100%;
         width: 100%;
         overflow: hidden;
-        position: relative;
       }
+      
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       .writing-vertical { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 0.1em; }
+      
       .texture-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
