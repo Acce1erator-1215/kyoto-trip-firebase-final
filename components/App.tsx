@@ -1,4 +1,3 @@
-
 import React, { useRef, useLayoutEffect, useEffect } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { SakuraOverlay } from './SakuraOverlay';
@@ -76,8 +75,7 @@ function AppContent() {
 
 
   return (
-    // Change h-full to h-[100dvh] to correctly handle mobile URL bar dynamics
-    <div className="fixed inset-0 h-[100dvh] bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
+    <div className="fixed inset-0 bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
       {/* Critical DB Error Overlay */}
       {dbError && (
@@ -93,11 +91,10 @@ function AppContent() {
       <Header triggerSakura={triggerSakura} isSpinning={isSpinning} />
 
       {/* Main Content Area */}
-      {/* Increased padding-bottom significantly to clear Bottom Nav + Safe Area */}
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 
-        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-[calc(6rem+env(safe-area-inset-bottom))] ${mainContentDrag.className.replace('select-none', '')}`}
+        className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-20 ${mainContentDrag.className.replace('select-none', '')}`}
       >
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
           {activeTab === 'itinerary' && <ItineraryTab />}
