@@ -75,9 +75,9 @@ function AppContent() {
 
 
   return (
-    // Update: 改用 h-[100svh]。svh 代表 Small Viewport Height，即使網址列展開，內容也能完整顯示不被遮擋。
-    // 這比 JS 計算更穩定，沒有 Race Condition。
-    <div className="h-[100svh] w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base relative">
+    // Update: 使用 h-[100svh] (Small Viewport Height) 確保在移動端網址列展開時也能完整顯示
+    // 改用 relative positioning，讓內部的 BottomNavigation 使用 absolute 定位
+    <div className="relative h-[100svh] w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
       
       {/* Critical DB Error Overlay */}
       {dbError && (
@@ -93,6 +93,7 @@ function AppContent() {
       <Header triggerSakura={triggerSakura} isSpinning={isSpinning} />
 
       {/* Main Content Area */}
+      {/* Update: padding-bottom 增加至 pb-28，避免被 absolute 的導航列遮擋 */}
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 
