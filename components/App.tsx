@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useEffect } from 'react';
+import React, { useRef, useLayoutEffect, useEffect, useState } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { SakuraOverlay } from './SakuraOverlay';
 import { Header } from './Header';
@@ -43,6 +43,24 @@ function AppContent() {
   const { dbError } = useData();
   const { activeTab, focusedLocation } = useUI();
   const { isSpinning, sakuraPetals, triggerSakura } = useSakuraAnimation();
+  
+  // --- Fix: JS Viewport Height ---
+  // 使用 JS 強制計算視窗高度，解決 CSS 100dvh 在部分瀏覽器初始化時不穩定的問題
+  const [appHeight, setAppHeight] = useState('100dvh'); 
+  
+  useEffect(() => {
+    const updateHeight = () => {
+      // 獲取確切的像素高度，這是最穩定的解法
+      setAppHeight(`${window.innerHeight}px`);
+    };
+    
+    // 初始化執行
+    updateHeight();
+    
+    // 監聽 Resize 事件 (旋轉螢幕或網址列伸縮)
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
 
   // --- Scroll Logic ---
   const tabScrollPositions = useRef<Record<string, number>>({});
@@ -75,8 +93,11 @@ function AppContent() {
 
 
   return (
-    // Update: 使用 h-[100dvh] 取代 fixed inset-0，這能更穩定地處理移動端瀏覽器網址列伸縮的問題
-    <div className="h-[100dvh] w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base relative">
+    // Update: 使用 inline style 強制設定高度，繞過 CSS 載入延遲
+    <div 
+      className="w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base relative"
+      style={{ height: appHeight }}
+    >
       
       {/* Critical DB Error Overlay */}
       {dbError && (
@@ -95,7 +116,6 @@ function AppContent() {
       <div 
         ref={mainContentDrag.ref} 
         {...mainContentDrag.events} 
-        // Update: 增加 pb-28 (112px) 確保底部內容不被導航列遮擋
         className={`flex-1 overflow-y-auto relative z-10 bg-wafu-paper overscroll-y-contain pb-28 ${mainContentDrag.className.replace('select-none', '')}`}
       >
         <div key={activeTab} className="animate-fade-in-up-gentle min-h-full flex flex-col">
