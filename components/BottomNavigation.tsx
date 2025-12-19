@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useUI } from '../context/UIContext';
 import { useData } from '../context/DataContext';
@@ -12,8 +13,12 @@ export const BottomNavigation: React.FC = () => {
   const shoppingCount = shoppingItems.filter(i => !i.bought && !i.deleted).length;
 
   return (
-    <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-40 transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
-       <div className="md:bg-wafu-paper/95 md:backdrop-blur-xl md:border md:border-wafu-indigo/10 md:rounded-full md:shadow-2xl shadow-[0_-5px_20px_rgba(24,54,84,0.02)] pb-[env(safe-area-inset-bottom,0px)] md:pb-1 md:px-8">
+    // Fixed bottom-0 guarantees position relative to viewport
+    // z-50 ensures it's above everything including map markers
+    // bg-wafu-paper/95 provides the base opacity so the underlying body color doesn't show through
+    <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-50 transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
+       {/* pb-[env(safe-area-inset-bottom)] pushes the icons up away from the home indicator */}
+       <div className="md:bg-wafu-paper/95 md:backdrop-blur-xl md:border md:border-wafu-indigo/10 md:rounded-full md:shadow-2xl shadow-[0_-5px_20px_rgba(24,54,84,0.02)] pb-[env(safe-area-inset-bottom,20px)] pt-1 md:pb-1 md:px-8">
           <div className="max-w-lg mx-auto w-full md:w-auto grid grid-cols-6 md:gap-8 px-1">
             <button onClick={() => setActiveTab('itinerary')} className={`relative z-10 group flex flex-col items-center justify-center gap-0.5 p-2 pt-3 pb-2 transition-all duration-300 active-bounce ${activeTab === 'itinerary' ? 'text-wafu-indigo' : 'text-stone-400 hover:text-wafu-indigo/60'}`}>
               <div className={`p-0.5 transition-all duration-500 ease-out ${activeTab === 'itinerary' ? 'transform -translate-y-0.5 scale-110' : ''}`}><Icons.Calendar strokeWidth={2.5} /></div>
