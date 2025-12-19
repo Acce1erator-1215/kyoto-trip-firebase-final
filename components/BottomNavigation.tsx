@@ -12,12 +12,13 @@ export const BottomNavigation: React.FC = () => {
   const shoppingCount = shoppingItems.filter(i => !i.bought && !i.deleted).length;
 
   return (
-    // Update: 改回 fixed bottom-0 並強制提高 z-index 至 9999
-    // 即使父容器高度計算有微小誤差，fixed bottom-0 也會強制貼在螢幕玻璃最下方
-    <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-[9999] transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
+    // Update: 改用 absolute bottom-0
+    // 在 body 為 fixed inset-0 的架構下，App 容器是 relative 且充滿螢幕的。
+    // 因此 absolute bottom-0 會將導航列精確釘在 App 容器的最底端 (即螢幕底端)，
+    // 且比 fixed 更能避免鍵盤彈出時的佈局錯亂。
+    <div className="absolute bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-[9999] transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
        {/* 
-          保留 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] 
-          確保 iPhone 底部橫條 (Home Indicator) 不會遮擋按鈕
+          保留 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] 確保不被 Home Indicator 遮擋
        */}
        <div className="md:bg-wafu-paper/95 md:backdrop-blur-xl md:border md:border-wafu-indigo/10 md:rounded-full md:shadow-2xl shadow-[0_-5px_20px_rgba(24,54,84,0.02)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 md:pb-1 md:px-8">
           <div className="max-w-lg mx-auto w-full md:w-auto grid grid-cols-6 md:gap-8 px-1">
