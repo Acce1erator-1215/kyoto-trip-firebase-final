@@ -14,22 +14,26 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      /* Update: 移除 position: fixed，改用 height: 100% + overflow: hidden */
-      /* 這能讓內部的 svh 單位正確運作，同時防止 iOS 回彈 */
+      /* Update: App Shell 鎖定策略 */
+      /* 使用 fixed inset-0 強制鎖定視窗，這是解決移動端高度問題的終極方案 */
       html, body {
-        height: 100%;
+        position: fixed;
+        inset: 0;
         width: 100%;
+        height: 100%;
         margin: 0;
         padding: 0;
-        overflow: hidden; 
+        overflow: hidden; /* 禁止瀏覽器層級滾動 */
         overscroll-behavior: none;
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
+        z-index: 0;
       }
       #root {
         height: 100%;
         width: 100%;
         overflow: hidden;
+        position: relative;
       }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
