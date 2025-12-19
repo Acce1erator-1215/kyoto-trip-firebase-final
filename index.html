@@ -14,26 +14,23 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      /* Update: App Shell 鎖定策略 */
-      /* 使用 fixed inset-0 強制鎖定視窗，這是解決移動端高度問題的終極方案 */
+      /* Update: 回歸標準流動佈局，但禁止溢出 */
+      /* 配合 JS 計算的 --app-height 變數，這是最穩健的移動端全螢幕方案 */
       html, body {
-        position: fixed;
-        inset: 0;
-        width: 100%;
         height: 100%;
+        width: 100%;
         margin: 0;
         padding: 0;
-        overflow: hidden; /* 禁止瀏覽器層級滾動 */
+        overflow: hidden; /* 防止 iOS 彈性滾動效果影響佈局 */
         overscroll-behavior: none;
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
-        z-index: 0;
+        background-color: #FDFBF7; /* 預防載入時閃爍 */
       }
       #root {
         height: 100%;
         width: 100%;
         overflow: hidden;
-        position: relative;
       }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

@@ -12,8 +12,10 @@ export const BottomNavigation: React.FC = () => {
   const shoppingCount = shoppingItems.filter(i => !i.bought && !i.deleted).length;
 
   return (
-    // Update: 改回 fixed bottom-0。在 body 為 fixed 的 App Shell 模式下，這是最安全的定位方式。
-    <div className="fixed bottom-0 left-0 right-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-[100] transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
+    // Update: 改用 absolute bottom-0 w-full z-50
+    // 因為 App 容器的高度已經透過 JS 鎖定為 window.innerHeight，
+    // 所以 absolute bottom-0 必定位於螢幕可見區域的最底端。
+    <div className="absolute bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-50 transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
        {/* 
           保留 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] 確保不被 Home Indicator 遮擋
        */}

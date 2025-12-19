@@ -72,12 +72,34 @@ function AppContent() {
       mainContentDrag.ref.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [focusedLocation]);
+  
+  // --- Mobile Height Fix (JS Force Calc) ---
+  useEffect(() => {
+    const setAppHeight = () => {
+      // 獲取視窗的內部高度 (這會正確排除網址列等瀏覽器 UI)
+      const doc = document.documentElement;
+      doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+    };
+
+    // 初始化與監聽 resize / orientationchange
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    window.addEventListener('orientationchange', setAppHeight);
+
+    return () => {
+      window.removeEventListener('resize', setAppHeight);
+      window.removeEventListener('orientationchange', setAppHeight);
+    };
+  }, []);
 
 
   return (
-    // Update: 使用 h-full w-full，依賴 index.html body 的 fixed inset-0。
-    // 這確保容器高度與螢幕鎖定，避免任何高度計算延遲。
-    <div className="h-full w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base">
+    // Update: 使用 JS 計算的 --app-height 變數，強制 App 容器等於當前可見區域
+    // 這解決了 100vh 在移動端網址列伸縮時導致的高度跳動或遮擋問題
+    <div 
+      className="relative w-full bg-wafu-paper flex flex-col overflow-hidden font-sans text-base"
+      style={{ height: 'var(--app-height, 100vh)' }}
+    >
       
       {/* Critical DB Error Overlay */}
       {dbError && (
