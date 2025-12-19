@@ -49,7 +49,21 @@ let db: any;
 if (firebase) {
     db = firebase.firestore();
     
-    // 啟用離線持久化
+    // 攔截並過濾 Firestore 的棄用警告
+    // 說明：Firebase SDK (v10.8.0 Compat) 在使用 enablePersistence 時會發出 
+    // "enableMultiTabIndexedDbPersistence() will be deprecated" 的警告。
+    // 由於 Compat UMD 版本尚未完全暴露 persistentLocalCache 等新 API，
+    // 我們繼續使用 enablePersistence 但暫時過濾掉該警告以保持控制台整潔。
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+        const msg = args[0];
+        if (msg && typeof msg === 'string' && 
+           (msg.includes('enableMultiTabIndexedDbPersistence') || msg.includes('FirestoreSettings.cache'))) {
+            return;
+        }
+        originalWarn.apply(console, args);
+    };
+    
     db.enablePersistence({ synchronizeTabs: true }).catch((err: any) => {
         if (err.code == 'failed-precondition') {
             console.warn("Multiple tabs open, persistence can only be enabled in one tab at a a time.");

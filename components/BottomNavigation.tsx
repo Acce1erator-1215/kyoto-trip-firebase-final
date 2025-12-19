@@ -1,22 +1,17 @@
-
 import React from 'react';
+import { useUI } from '../context/UIContext';
+import { useData } from '../context/DataContext';
 import { Icons } from './Icon';
 
 export type Tab = 'itinerary' | 'sightseeing' | 'food' | 'money' | 'shop' | 'flight';
 
-interface BottomNavigationProps {
-  activeTab: Tab;
-  setActiveTab: (tab: Tab) => void;
-  shoppingCount: number;
-}
+export const BottomNavigation: React.FC = () => {
+  const { activeTab, setActiveTab } = useUI();
+  const { shoppingItems } = useData();
 
-export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, setActiveTab, shoppingCount }) => {
+  const shoppingCount = shoppingItems.filter(i => !i.bought && !i.deleted).length;
+
   return (
-    /* 
-      RWD 優化：
-      1. Mobile: fixed bottom-0 left-0 w-full，背景色覆蓋到最底層。
-      2. 使用 env(safe-area-inset-bottom) 確保內容不被 iPhone Home Indicator 遮擋，但移除額外的 0.5rem 以降低高度。
-    */
     <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-1/2 md:-translate-x-1/2 md:bottom-8 z-40 transition-all duration-300 bg-wafu-paper/95 backdrop-blur-xl border-t border-wafu-indigo/5 md:bg-transparent md:backdrop-blur-none md:border-none">
        <div className="md:bg-wafu-paper/95 md:backdrop-blur-xl md:border md:border-wafu-indigo/10 md:rounded-full md:shadow-2xl shadow-[0_-5px_20px_rgba(24,54,84,0.02)] pb-[env(safe-area-inset-bottom,0px)] md:pb-1 md:px-8">
           <div className="max-w-lg mx-auto w-full md:w-auto grid grid-cols-6 md:gap-8 px-1">

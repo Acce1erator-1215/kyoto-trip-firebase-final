@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ShoppingItem, Expense } from '../types';
 import { Icons } from './Icon';
@@ -157,10 +156,19 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
   const handleDelete = async (id: string, item: ShoppingItem, e: React.MouseEvent) => {
       e.stopPropagation();
       try {
-        await db.collection('shopping').doc(id).update({ deleted: true });
+        const batch = db.batch();
+        
+        // 1. Soft delete the shopping item
+        const shoppingRef = db.collection('shopping').doc(id);
+        batch.update(shoppingRef, { deleted: true });
+
+        // 2. Soft delete the linked expense (if exists)
         if (item.linkedExpenseId) {
-             await db.collection('expenses').doc(item.linkedExpenseId).delete();
+             const expenseRef = db.collection('expenses').doc(item.linkedExpenseId);
+             batch.update(expenseRef, { deleted: true });
         }
+        
+        await batch.commit();
         showToast("已移至回收桶", "info");
       } catch (err) {
           console.error("Error deleting shopping item:", err);
@@ -168,14 +176,48 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
       }
   };
 
-  const handleRestore = async (id: string) => {
-      await db.collection('shopping').doc(id).update({ deleted: false });
-      showToast("商品已復原", "success");
+  const handleRestore = async (item: ShoppingItem) => {
+      try {
+        const batch = db.batch();
+
+        // 1. Restore shopping item
+        const shoppingRef = db.collection('shopping').doc(item.id);
+        batch.update(shoppingRef, { deleted: false });
+
+        // 2. Restore linked expense (if exists)
+        if (item.linkedExpenseId) {
+            const expenseRef = db.collection('expenses').doc(item.linkedExpenseId);
+            // Note: Update might fail if expense was hard deleted previously, 
+            // but for soft-delete workflow this is correct.
+            batch.update(expenseRef, { deleted: false });
+        }
+
+        await batch.commit();
+        showToast("商品已復原", "success");
+      } catch (err) {
+          console.error("Error restoring item:", err);
+          showToast("復原失敗", "error");
+      }
   };
 
-  const handlePermanentDelete = async (id: string) => {
-      await db.collection('shopping').doc(id).delete();
-      showToast("商品永久刪除", "success");
+  const handlePermanentDelete = async (item: ShoppingItem) => {
+      try {
+        const batch = db.batch();
+        
+        const shoppingRef = db.collection('shopping').doc(item.id);
+        batch.delete(shoppingRef);
+
+        if (item.linkedExpenseId) {
+            const expenseRef = db.collection('expenses').doc(item.linkedExpenseId);
+            batch.delete(expenseRef);
+        }
+
+        await batch.commit();
+        showToast("商品永久刪除", "success");
+      } catch (err) {
+        console.error("Error permanent deleting:", err);
+        showToast("刪除失敗", "error");
+      }
   };
 
   const updateQuantity = async (id: string, delta: number, currentItem: ShoppingItem) => {
@@ -269,13 +311,13 @@ export const ShoppingList: React.FC<Props> = ({ items, expenses, currentRate = 0
                        <span className="text-sm text-stone-500 font-serif truncate flex-1">{item.name}</span>
                        <div className="flex gap-1 shrink-0">
                            <button 
-                             onClick={() => handleRestore(item.id)}
+                             onClick={() => handleRestore(item)}
                              className="text-xs bg-stone-200 hover:bg-wafu-indigo hover:text-white px-2 py-1 rounded-md transition-colors font-bold active-bounce"
                            >
                              復原
                            </button>
                            <button 
-                             onClick={() => handlePermanentDelete(item.id)}
+                             onClick={() => handlePermanentDelete(item)}
                              className="text-xs bg-stone-100 text-stone-400 hover:bg-red-50 hover:text-red-500 px-2 py-1 rounded-md transition-colors font-bold active-bounce"
                            >
                              永久刪除
