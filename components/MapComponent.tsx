@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { ItineraryItem, Restaurant, SightseeingSpot, Category } from '../types';
 
@@ -76,6 +75,12 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return; // Critical: 避免 React Strict Mode 導致重複初始化
 
+    // Safety Check: 確保 Leaflet 庫已正確載入
+    if (typeof L === 'undefined') {
+        console.error("Leaflet SDK not loaded. Check script tags in index.html");
+        return;
+    }
+
     try {
         const map = L.map(mapContainerRef.current, {
             center: [KYOTO_CENTER.lat, KYOTO_CENTER.lng],
@@ -125,7 +130,8 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
   // Effect 3: 渲染地點標記 (當 items 更新時)
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map) return;
+    // Safety Check for L
+    if (!map || typeof L === 'undefined') return;
 
     // 清除舊標記 (Performance: 避免標記無限疊加)
     itemMarkersRef.current.forEach(m => m.remove());
@@ -225,7 +231,7 @@ export const MapComponent: React.FC<Props> = ({ items, userLocation, focusedLoca
   // Effect 5: 使用者位置標記 (帶動畫)
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !userLocation) return;
+    if (!map || !userLocation || typeof L === 'undefined') return;
     
     // CSS3 Animation implementation inside SVG/HTML
     const userIcon = L.divIcon({
